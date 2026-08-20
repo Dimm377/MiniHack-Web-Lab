@@ -28,3 +28,15 @@ Environment: Arch Linux, PHP 8.5.9, PDO SQLite, SQLite 3.53.4
 ## Fix made during validation
 
 The development router originally allowed `/.git/config`. `router.php` now rejects hidden path segments, and the root `.htaccess` provides matching Apache rules for hidden paths and private application directories. The relevant public and private-path regression checks passed after the change.
+
+## v0.2 Phase A validation
+
+- Unauthenticated challenge list and detail requests redirected to login.
+- The initializer created the `solves` table and instance secret idempotently. The unique solve constraint, foreign key cascade, `0600` permissions, and Git ignore rules were verified.
+- Two authenticated users received different flags for the same challenge.
+- Query Parameters exposed the expected flag only for `inspect=request`; Response Headers used `X-MiniHack-Flag`; Page Source used an HTML comment. Each matched the server-derived per-user value.
+- Missing and invalid CSRF tokens returned 403 without adding solves. An invalid flag returned a generic error.
+- Valid flags recorded solves. Repeating a valid submission did not create another row.
+- One user's 3/3 progress did not affect the other user's 0/3 progress, and submitting another user's flag failed.
+- Challenge responses use `Cache-Control: no-store`. The secret returned 404 over HTTP and no normal API exposed flags, solve state, or the secret.
+- Registration, login, notes ownership, note CSRF, profile isolation, search encoding, user API field filtering, security headers, POST logout, and internal-file protection passed regression checks.

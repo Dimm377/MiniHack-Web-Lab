@@ -22,6 +22,7 @@ $flash = take_flash();
         <a href="/">Home</a>
         <a href="/search.php">Search</a>
         <?php if ($navUser !== null): ?>
+            <a href="/challenges.php">Challenges</a>
             <a href="/notes.php">Notes</a>
             <a href="/profile.php">Profile</a>
             <form class="inline" method="post" action="/logout.php">

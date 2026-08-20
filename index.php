@@ -11,9 +11,9 @@ require __DIR__ . '/includes/header.php';
 $user = current_user();
 ?>
 <section class="hero">
-    <p class="eyebrow">v0.1 / secure baseline</p>
+    <p class="eyebrow">v0.2 / HTTP exploration</p>
     <h1>Application overview</h1>
-    <p>Local PHP application for inspecting HTTP requests, session behavior, authorization checks, SQLite queries, and HTML or JSON responses.</p>
+    <p>Local PHP application for inspecting HTTP requests, response behavior, sessions, authorization checks, SQLite queries, and HTML or JSON output.</p>
     <p class="status">
         <?php if ($user !== null): ?>
             Signed in as <strong><?= e($user['username']) ?></strong>.

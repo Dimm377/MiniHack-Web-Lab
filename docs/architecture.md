@@ -15,7 +15,7 @@
 - `api/` contains the JSON user endpoint.
 - `assets/` contains static CSS and JavaScript.
 - `config/` owns database connection configuration.
-- `includes/` owns focused session, authentication, CSRF, rendering, and shared helpers.
+- `includes/` owns focused session, authentication, CSRF, challenge definitions, rendering, and shared helpers.
 - `database/` contains the ignored runtime SQLite file and an Apache access-denial rule.
 - `scripts/` contains the CLI-only, idempotent database initializer.
 - `docs/` contains project documentation.
@@ -28,9 +28,9 @@ The browser receives a PHP session cookie. It is `HttpOnly`, `SameSite=Lax`, and
 
 ## Database access
 
-`config/database.php` creates the PDO SQLite connection, enables exception mode and foreign-key enforcement, and disables emulated prepared statements. `scripts/init_db.php` owns schema creation. Application queries use prepared statements for user-controlled values.
+`config/database.php` creates the PDO SQLite connection, enables exception mode and foreign-key enforcement, and disables emulated prepared statements. `scripts/init_db.php` owns schema creation and creates the challenge instance secret once. Application queries use prepared statements for user-controlled values.
 
-The SQLite file is deliberately absent from version control. Apache `.htaccess` rules and the PHP development-server `router.php` block private directories and hidden paths such as `.git`.
+The SQLite file and `database/instance_secret` are deliberately absent from version control. Both use permission `0600`. Apache `.htaccess` rules and the PHP development-server `router.php` block private directories and hidden paths such as `.git`.
 
 ## Authorization boundaries
 
@@ -39,3 +39,9 @@ The SQLite file is deliberately absent from version control. Apache `.htaccess` 
 ## API request flow
 
 `GET /api/users.php?id=<id>` rejects unsupported methods, validates a positive integer ID, selects only `id` and `username`, and returns JSON. It uses 200, 400, 404, 405, or 500 status codes without returning SQL errors, stack traces, password hashes, or private note data.
+
+## Challenge flow
+
+`includes/challenges.php` contains the three code-defined challenge records and the flag helper. The catalog is not stored in SQLite. `challenges.php` lists the catalog and joins it with the authenticated user's solve state. `challenge.php` handles the intended HTTP interaction and CSRF-protected flag submission.
+
+The initializer stores a random 32-byte instance secret as ignored runtime data. A user's expected flag is derived with HMAC-SHA256 over the user ID and challenge slug, then formatted as `MHL{...}`. The secret and expected flags are not stored in the solve table. A valid submission inserts `(user_id, challenge_slug)` with a unique constraint, so duplicate submissions remain idempotent and another user's progress is unaffected.

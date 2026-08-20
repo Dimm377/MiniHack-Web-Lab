@@ -10,6 +10,7 @@
 /database/*.sqlite3-journal
 /database/*.sqlite3-shm
 /database/*.sqlite3-wal
+/database/instance_secret
 
 .env
 .env.*

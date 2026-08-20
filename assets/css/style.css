@@ -171,6 +171,70 @@ p {
     white-space: nowrap;
 }
 
+.progress {
+    color: var(--muted);
+}
+
+.challenge-list {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.challenge-row {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.challenge-row h2,
+.challenge-row p {
+    margin: 0;
+}
+
+.challenge-row > p {
+    color: var(--muted);
+}
+
+.challenge-status {
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: .78rem;
+}
+
+.challenge-status.is-solved {
+    color: var(--success);
+}
+
+.challenge-task ol {
+    max-width: 70ch;
+    padding-left: 1.25rem;
+}
+
+.challenge-task li + li {
+    margin-top: .4rem;
+}
+
+.challenge-output {
+    display: grid;
+    gap: .35rem;
+    max-width: 520px;
+    padding: .75rem 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.challenge-output span {
+    color: var(--muted);
+    font-size: .85rem;
+}
+
+.flag-submit {
+    max-width: 620px;
+}
+
 .api-demo {
     padding-top: 0;
 }
@@ -382,6 +446,15 @@ code {
     .card {
         grid-template-columns: 1fr;
         gap: .35rem;
+    }
+
+    .challenge-row {
+        grid-template-columns: 1fr auto;
+        gap: .35rem 1rem;
+    }
+
+    .challenge-row > p {
+        grid-column: 1 / -1;
     }
 
     .compact-form {
