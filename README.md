@@ -97,13 +97,6 @@ See [SECURITY.md](SECURITY.md) for the project policy.
 
 The v0.1 runtime validation covered PHP syntax, database initialization, authentication, CSRF, authorization, output encoding, API behavior, security headers, and internal-file protection. See [docs/validation.md](docs/validation.md) for the results and the remaining Apache-specific check.
 
-## Roadmap
-
-- v0.1 Secure Baseline
-- v0.2 HTTP Exploration
-- v0.3 Controlled Vulnerability Labs
-- v0.4 Exploitation & Root Cause Analysis
-- v0.5 Remediation & Retesting
 
 ## License
 
