@@ -1,0 +1,7 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule "(^|/)\." - [R=404,L]
+    RewriteRule "^(?:config|database|includes|scripts)(?:/|$)" - [R=404,L]
+</IfModule>
