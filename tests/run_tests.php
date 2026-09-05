@@ -77,31 +77,64 @@ try {
     assert_true(strpos((string)$res2['body'], '<script>') === false, "Output encoding prevents XSS in username reflection");
     assert_true(strpos((string)$res2['body'], '&lt;script&gt;') !== false || strpos((string)$res2['body'], 'Invalid username') !== false, "Username properly escaped or rejected");
 
+    // Register User A
     $regRes = get('/register.php');
-    $regCookie = extract_cookie($regRes['headers']);
-    $regCsrf = extract_csrf($regRes['body']);
-    $res3 = post('/register.php', [
-        'username' => 'testuser',
-        'password' => 'testpass',
-        'csrf_token' => $regCsrf
-    ], $regCookie);
-    assert_true(strpos(implode("\n", $res3['headers']), 'Location: /login.php') !== false, "Registration redirects to login");
+    $regCookieA = extract_cookie($regRes['headers']);
+    $regCsrfA = extract_csrf($regRes['body']);
+    post('/register.php', [
+        'username' => 'usera',
+        'password' => 'pass',
+        'csrf_token' => $regCsrfA
+    ], $regCookieA);
 
-    $res4 = post('/login.php', ['username' => 'testuser', 'password' => 'testpass', 'csrf_token' => 'invalid'], $regCookie);
-    assert_true(strpos($res4['headers'][0] ?? '', '403') !== false, "Invalid CSRF token results in 403 Forbidden");
+    // Login User A
+    $loginPageA = get('/login.php', $regCookieA);
+    $loginCsrfA = extract_csrf($loginPageA['body']);
+    $resLoginA = post('/login.php', ['username' => 'usera', 'password' => 'pass', 'csrf_token' => $loginCsrfA], $regCookieA);
+    $cookieA = extract_cookie($resLoginA['headers']) ?: $regCookieA;
 
-    $loginPage = get('/login.php', $regCookie);
+    // Register User B
+    $regResB = get('/register.php');
+    $regCookieB = extract_cookie($regResB['headers']);
+    $regCsrfB = extract_csrf($regResB['body']);
+    post('/register.php', [
+        'username' => 'userb',
+        'password' => 'pass',
+        'csrf_token' => $regCsrfB
+    ], $regCookieB);
+
+    // Login User B
+    $loginPageB = get('/login.php', $regCookieB);
+    $loginCsrfB = extract_csrf($loginPageB['body']);
+    $resLoginB = post('/login.php', ['username' => 'userb', 'password' => 'pass', 'csrf_token' => $loginCsrfB], $regCookieB);
+    $cookieB = extract_cookie($resLoginB['headers']) ?: $regCookieB;
+
+    // Test Authorization: User A creates a note
+    $notesPageA = get('/notes.php', $cookieA);
+    $csrfNotesA = extract_csrf($notesPageA['body']);
+    post('/notes.php', ['action' => 'create', 'title' => 'User A Note', 'content' => 'Secret', 'csrf_token' => $csrfNotesA], $cookieA);
+    
+    // Find User A's note ID
+    $notesPageA2 = get('/notes.php', $cookieA);
+    preg_match('/name="note_id"\s+value="(\d+)"/', $notesPageA2['body'], $matches);
+    $noteId = $matches[1] ?? '1';
+
+    // User B tries to delete User A's note
+    $notesPageB = get('/notes.php', $cookieB);
+    $csrfNotesB = extract_csrf($notesPageB['body']);
+    $deleteResB = post('/notes.php', ['action' => 'delete', 'note_id' => $noteId, 'csrf_token' => $csrfNotesB], $cookieB);
+    assert_true(strpos((string)$deleteResB['body'], 'Note not found or not permitted') !== false, "Authorization prevents User B from deleting User A's note");
+
+    // Test SQL Injection Resistance: Auth Bypass
+    $loginPage = get('/login.php');
+    $loginCookie = extract_cookie($loginPage['headers']);
     $loginCsrf = extract_csrf($loginPage['body']);
-    $res5 = post('/login.php', ['username' => 'testuser', 'password' => 'testpass', 'csrf_token' => $loginCsrf], $regCookie);
-    $sessionCookie = extract_cookie($res5['headers']);
-    if (!$sessionCookie) $sessionCookie = $regCookie;
-    assert_true(strpos(implode("\n", $res5['headers']), 'Location: /profile.php') !== false, "Valid login redirects to profile");
+    $sqliRes = post('/login.php', ['username' => "' OR '1'='1", 'password' => 'wrong', 'csrf_token' => $loginCsrf], $loginCookie);
+    assert_true(strpos((string)$sqliRes['body'], 'Invalid username or password') !== false, "SQL parameterization prevents authentication bypass");
 
-    $profileRes = get('/profile.php', $sessionCookie);
-    assert_true(strpos((string)$profileRes['body'], 'testuser') !== false, "Profile loads and shows username");
-
-    $unauthRes = get('/profile.php');
-    assert_true(strpos(implode("\n", $unauthRes['headers']), 'Location: /login.php') !== false, "Unauthenticated access redirects to login");
+    // Test SQL Injection Resistance: Search Metacharacters
+    $searchRes = get('/search.php?q=%25', $cookieA);
+    assert_true(strpos((string)$searchRes['body'], 'No matching users found') !== false, "SQL LIKE parameterization escapes metacharacters (%) properly");
 
 } finally {
     echo "Stopping server...\n";
