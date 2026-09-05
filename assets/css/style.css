@@ -110,8 +110,12 @@ progress::-moz-progress-bar { background: var(--accent); }
 .form-panel > p { color: var(--muted); font-size: .9rem; }
 .form-switch { border-top: 1px solid var(--border); padding-top: 1.2rem; margin-top: 1.5rem; }
 .solved-answer { margin-top: 2rem; padding: 1.1rem 1.25rem; background: rgba(160, 193, 165, 0.08); border: 1px solid var(--border); border-radius: var(--radius); }
-.solved-answer span { display: block; margin-bottom: .4rem; }
+.solved-answer > span { display: block; margin-bottom: .4rem; }
 .solved-answer code { color: var(--success); font-size: .95rem; }
+.learning-divider { border: 0; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+.learning-heading { font-size: .95rem; margin-bottom: .75rem; }
+.learning-content h4 { font-size: .85rem; margin: 1rem 0 .25rem; color: var(--muted); font-weight: 600; }
+.learning-content p { font-size: .85rem; margin: 0; line-height: 1.6; }
 form { display: grid; gap: .5rem; }
 label { margin-top: .5rem; font-size: .85rem; font-weight: 600; }
 input, textarea, button { border: 1px solid var(--border); border-radius: var(--radius); padding: .65rem .75rem; background: var(--input); color: var(--text); font: inherit; min-width: 0; }

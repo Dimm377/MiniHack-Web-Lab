@@ -112,6 +112,18 @@ require __DIR__ . '/includes/header.php';
     <div class="solved-answer">
         <span class="hint">Answer</span>
         <code class="technical"><?= e($expectedFlag) ?></code>
+        <?php if (isset($challenge['learning'])): ?>
+        <hr class="learning-divider">
+        <h3 class="learning-heading">What you learned</h3>
+        <div class="learning-content">
+            <h4>What happened</h4>
+            <p><?= e($challenge['learning']['what_happened']) ?></p>
+            <h4>Why it worked</h4>
+            <p><?= e($challenge['learning']['why_it_worked']) ?></p>
+            <h4>Security takeaway</h4>
+            <p><?= e($challenge['learning']['security_takeaway']) ?></p>
+        </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 </section>
