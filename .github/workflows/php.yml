@@ -6,17 +6,24 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.2', '8.5']
     steps:
     - uses: actions/checkout@v4
     - name: Setup PHP
       uses: shivammathur/setup-php@v2
       with:
-        php-version: '8.2'
-        extensions: sqlite3
+        php-version: ${{ matrix.php }}
+        extensions: pdo_sqlite
+        coverage: none
     - name: Syntax Check
-      run: find . -name "*.php" -exec php -l {} \;
+      run: git ls-files -z '*.php' | xargs -0 -n1 php -l
     - name: Run Regression Tests
       run: php tests/run_tests.php

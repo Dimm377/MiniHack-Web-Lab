@@ -11,6 +11,7 @@ $user = require_auth();
 $errors = [];
 $title = '';
 $content = '';
+$action = '';
 if (is_post()) {
     verify_csrf_or_abort();
     $action = request_string($_POST, 'action');
@@ -57,43 +58,52 @@ $notes = $statement->fetchAll();
 $pageTitle = 'Notes';
 require __DIR__ . '/includes/header.php';
 ?>
-<section>
-    <p class="eyebrow">Authenticated + owner-only</p>
-    <h1>Your private notes</h1>
+<section class="page-heading">
+    <h1>Private notes</h1>
+    <p>Your observations and working notes. Only your account can read or delete them.</p>
+</section>
+<div class="notes-layout">
+<section class="note-composer">
+    <h2>New note</h2>
     <?php if ($errors !== []): ?>
-        <div class="alert alert-error" role="alert"><ul>
+        <div id="note-errors" class="alert alert-error" role="alert" tabindex="-1" data-error-summary><ul>
             <?php foreach ($errors as $error): ?><li><?= e($error) ?></li><?php endforeach; ?>
         </ul></div>
     <?php endif; ?>
-    <form class="note-form" method="post" action="/notes.php">
+    <form class="note-form" method="post" action="/notes.php" novalidate>
         <?= csrf_input() ?>
         <input type="hidden" name="action" value="create">
         <label for="title">Title</label>
-        <input id="title" name="title" type="text" maxlength="100" value="<?= e($title) ?>" required>
+        <input id="title" name="title" type="text" maxlength="100" value="<?= e($title) ?>"<?= $errors !== [] && $action === 'create' ? ' aria-invalid="true" aria-describedby="note-errors"' : '' ?> required>
         <label for="content">Content</label>
-        <textarea id="content" name="content" rows="6" maxlength="5000" required><?= e($content) ?></textarea>
+        <textarea id="content" class="resize-none" name="content" rows="8" maxlength="5000"<?= $errors !== [] && $action === 'create' ? ' aria-invalid="true" aria-describedby="note-errors"' : '' ?> required><?= e($content) ?></textarea>
         <button type="submit">Create note</button>
     </form>
 </section>
 <section>
-    <h2>Saved notes</h2>
+    <div class="section-heading"><h2>Saved notes</h2><span class="hint"><?= count($notes) ?> <?= count($notes) === 1 ? 'note' : 'notes' ?></span></div>
     <?php if ($notes === []): ?>
-        <p class="empty-state">You have no notes yet.</p>
+        <p class="empty-state">No notes yet. Save a request, an observation or a question using the new note form.</p>
     <?php else: ?>
         <div class="notes-list">
             <?php foreach ($notes as $note): ?>
                 <article class="note">
                     <div><h3><?= e($note['title']) ?></h3><p class="note-meta"><?= e($note['created_at']) ?> UTC</p></div>
                     <p class="note-content"><?= nl2br(e($note['content']), false) ?></p>
-                    <form method="post" action="/notes.php">
+                    <details class="delete-confirmation">
+                    <summary>Delete note</summary>
+                    <p>Delete “<?= e($note['title']) ?>”? This cannot be undone. Close this disclosure to cancel.</p>
+                    <form method="post" action="/notes.php" novalidate>
                         <?= csrf_input() ?>
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="note_id" value="<?= e($note['id']) ?>">
-                        <button class="danger" type="submit">Delete</button>
+                        <button class="danger" type="submit">Delete permanently</button>
                     </form>
+                    </details>
                 </article>
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
 </section>
+</div>
 <?php require __DIR__ . '/includes/footer.php'; ?>

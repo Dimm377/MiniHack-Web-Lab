@@ -26,8 +26,9 @@ if (is_post()) {
     }
     if ($password === '') {
         $errors[] = 'Password is required.';
-    } elseif (strlen($password) < 8 || strlen($password) > 128) {
-        $errors[] = 'Password must be 8–128 characters.';
+    } elseif (strlen($password) < 8 || strlen($password) > 72 || str_contains($password, "\0")) {
+        // PASSWORD_DEFAULT currently uses bcrypt, which accepts at most 72 bytes.
+        $errors[] = 'Password must be 8–72 bytes and contain no null characters.';
     }
     if ($confirmation === '') {
         $errors[] = 'Password confirmation is required.';
@@ -66,24 +67,30 @@ require __DIR__ . '/includes/header.php';
 ?>
 <section class="form-panel">
     <h1>Create an account</h1>
-    <p>Usernames are public. Passwords are hashed before storage.</p>
+    <p>Save your notes and challenge progress. Your username will be public.</p>
     <?php if ($errors !== []): ?>
-        <div class="alert alert-error" role="alert"><ul>
+        <div id="register-errors" class="alert alert-error" role="alert" tabindex="-1" data-error-summary><ul>
             <?php foreach ($errors as $error): ?><li><?= e($error) ?></li><?php endforeach; ?>
         </ul></div>
     <?php endif; ?>
-    <form method="post" action="/register.php">
+    <form method="post" action="/register.php" novalidate>
         <?= csrf_input() ?>
         <label for="username">Username</label>
-        <input id="username" name="username" type="text" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]+" autocomplete="username" value="<?= e($username) ?>" required autofocus>
+        <input id="username" name="username" type="text" minlength="3" maxlength="30" pattern="[A-Za-z0-9_]+" autocomplete="username" value="<?= e($username) ?>" aria-describedby="username-help<?= $errors !== [] ? ' register-errors' : '' ?>"<?= $errors !== [] ? ' aria-invalid="true"' : '' ?> required autofocus>
+        <small id="username-help" class="hint">3–30 letters, numbers or underscores.</small>
         <label for="password">Password</label>
         <div class="password-row">
-            <input id="password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
-            <button type="button" class="secondary toggle-password" data-target="password">Show</button>
+            <input id="password" name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-help<?= $errors !== [] ? ' register-errors' : '' ?>"<?= $errors !== [] ? ' aria-invalid="true"' : '' ?> required>
+            <button type="button" class="secondary toggle-password" data-target="password" aria-label="Show password" aria-pressed="false" hidden>Show</button>
         </div>
+        <small id="password-help" class="hint">8–72 bytes. Non-ASCII characters may use more than one byte.</small>
         <label for="password_confirmation">Confirm password</label>
-        <input id="password_confirmation" name="password_confirmation" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+        <div class="password-row">
+            <input id="password_confirmation" name="password_confirmation" type="password" minlength="8" maxlength="72" autocomplete="new-password"<?= $errors !== [] ? ' aria-invalid="true" aria-describedby="register-errors"' : '' ?> required>
+            <button type="button" class="secondary toggle-password" data-target="password_confirmation" aria-label="Show confirm password" aria-pressed="false" hidden>Show</button>
+        </div>
         <button type="submit">Register</button>
     </form>
+    <p class="form-switch">Already registered? <a href="/login.php">Log in</a></p>
 </section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

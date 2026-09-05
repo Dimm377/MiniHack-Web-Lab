@@ -63,18 +63,18 @@ require __DIR__ . '/includes/header.php';
 <?php if ($slug === 'page-source'): ?>
 <!-- MiniHack challenge flag: <?= e($expectedFlag) ?> -->
 <?php endif; ?>
-<section>
+<section class="page-heading">
     <p><a href="/challenges.php">&larr; All challenges</a></p>
-    <p class="eyebrow"><?= e($challenge['method']) ?> / <?= e($slug) ?></p>
     <h1><?= e($challenge['title']) ?></h1>
     <p><?= e($challenge['summary']) ?></p>
     <p class="challenge-status <?= $solvedAt !== false ? 'is-solved' : '' ?>">
         <?= $solvedAt !== false ? 'solved ' . e($solvedAt) . ' UTC' : 'unsolved' ?>
     </p>
 </section>
-
+<p class="request-line"><span class="method"><?= e($challenge['method']) ?></span> <code>/challenge.php?slug=<?= e($slug) ?><?= $queryUnlocked ? '&amp;inspect=request' : '' ?></code></p>
+<div class="exercise-layout">
 <section class="challenge-task">
-    <h2>Task</h2>
+    <h2>Investigation</h2>
     <ol>
         <?php foreach ($challenge['instructions'] as $instruction): ?>
             <li><?= e($instruction) ?></li>
@@ -99,13 +99,15 @@ require __DIR__ . '/includes/header.php';
 <section class="flag-submit">
     <h2>Submit flag</h2>
     <?php if ($error !== null): ?>
-        <p class="alert alert-error" role="alert"><?= e($error) ?></p>
+        <p id="flag-error" class="alert alert-error" role="alert" tabindex="-1" data-error-summary><?= e($error) ?></p>
     <?php endif; ?>
-    <form method="post" action="/challenge.php?slug=<?= e(rawurlencode($slug)) ?>">
+    <p class="hint">Paste the complete flag, including <code>MHL{}</code>.</p>
+    <form method="post" action="/challenge.php?slug=<?= e(rawurlencode($slug)) ?>" novalidate>
         <?= csrf_input() ?>
         <label for="flag">Flag</label>
-        <input id="flag" class="technical" name="flag" type="text" maxlength="80" autocomplete="off" spellcheck="false" placeholder="MHL{...}" required>
+        <input id="flag" class="technical" name="flag" type="text" maxlength="80" autocomplete="off" spellcheck="false" placeholder="MHL{...}"<?= $error !== null ? ' aria-invalid="true" aria-describedby="flag-error"' : '' ?> required>
         <button type="submit">Submit flag</button>
     </form>
 </section>
+</div>
 <?php require __DIR__ . '/includes/footer.php'; ?>
