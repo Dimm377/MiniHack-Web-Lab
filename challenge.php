@@ -108,6 +108,12 @@ require __DIR__ . '/includes/header.php';
         <input id="flag" class="technical" name="flag" type="text" maxlength="80" autocomplete="off" spellcheck="false" placeholder="MHL{...}"<?= $error !== null ? ' aria-invalid="true" aria-describedby="flag-error"' : '' ?> required>
         <button type="submit">Submit flag</button>
     </form>
+    <?php if ($solvedAt !== false): ?>
+    <div class="solved-answer">
+        <span class="hint">Answer</span>
+        <code class="technical"><?= e($expectedFlag) ?></code>
+    </div>
+    <?php endif; ?>
 </section>
 </div>
 <?php require __DIR__ . '/includes/footer.php'; ?>
