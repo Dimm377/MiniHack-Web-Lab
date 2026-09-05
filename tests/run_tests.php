@@ -4,10 +4,10 @@ $host = '127.0.0.1:8080';
 $url = "http://$host";
 
 echo "Setting up database...\n";
-exec('php ' . __DIR__ . '/../scripts/init_db.php');
+exec(PHP_BINARY . ' ' . __DIR__ . '/../scripts/init_db.php');
 
 echo "Starting PHP built-in server...\n";
-$cmd = sprintf('php -S %s %s >/dev/null 2>&1 & echo $!', $host, escapeshellarg(__DIR__ . '/../router.php'));
+$cmd = sprintf(PHP_BINARY . ' -S %s %s >/dev/null 2>&1 & echo $!', $host, escapeshellarg(__DIR__ . '/../router.php'));
 $pid = (int) exec($cmd);
 sleep(1);
 
@@ -16,7 +16,8 @@ function get($path, $cookie = '') {
     $options = [
         'http' => [
             'header' => $cookie ? "Cookie: $cookie\r\n" : "",
-            'ignore_errors' => true
+            'ignore_errors' => true,
+            'follow_location' => 0
         ]
     ];
     $context = stream_context_create($options);
@@ -32,7 +33,8 @@ function post($path, $data, $cookie = '') {
             'method' => 'POST',
             'header' => "Content-type: application/x-www-form-urlencoded\r\n" . ($cookie ? "Cookie: $cookie\r\n" : ""),
             'content' => $postdata,
-            'ignore_errors' => true
+            'ignore_errors' => true,
+            'follow_location' => 0
         ]
     ];
     $context = stream_context_create($options);
@@ -48,12 +50,13 @@ function extract_csrf($html) {
 }
 
 function extract_cookie($headers) {
+    $last = '';
     foreach ($headers as $h) {
         if (preg_match('/^Set-Cookie:\s*(PHPSESSID=[^;]+)/i', $h, $matches)) {
-            return $matches[1];
+            $last = $matches[1];
         }
     }
-    return '';
+    return $last;
 }
 
 $failed = 0;
@@ -81,17 +84,20 @@ try {
     $regRes = get('/register.php');
     $regCookieA = extract_cookie($regRes['headers']);
     $regCsrfA = extract_csrf($regRes['body']);
-    post('/register.php', [
+    $regPostA = post('/register.php', [
         'username' => 'usera',
-        'password' => 'pass',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
         'csrf_token' => $regCsrfA
     ], $regCookieA);
+    assert_true(strpos(implode("\n", $regPostA['headers']), 'Location: /login.php') !== false, "Registration User A redirects to login");
 
     // Login User A
     $loginPageA = get('/login.php', $regCookieA);
     $loginCsrfA = extract_csrf($loginPageA['body']);
-    $resLoginA = post('/login.php', ['username' => 'usera', 'password' => 'pass', 'csrf_token' => $loginCsrfA], $regCookieA);
+    $resLoginA = post('/login.php', ['username' => 'usera', 'password' => 'password123', 'csrf_token' => $loginCsrfA], $regCookieA);
     $cookieA = extract_cookie($resLoginA['headers']) ?: $regCookieA;
+    assert_true(strpos(implode("\n", $resLoginA['headers']), 'Location: /profile.php') !== false, "User A logged in successfully");
 
     // Register User B
     $regResB = get('/register.php');
@@ -99,20 +105,23 @@ try {
     $regCsrfB = extract_csrf($regResB['body']);
     post('/register.php', [
         'username' => 'userb',
-        'password' => 'pass',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
         'csrf_token' => $regCsrfB
     ], $regCookieB);
 
     // Login User B
     $loginPageB = get('/login.php', $regCookieB);
     $loginCsrfB = extract_csrf($loginPageB['body']);
-    $resLoginB = post('/login.php', ['username' => 'userb', 'password' => 'pass', 'csrf_token' => $loginCsrfB], $regCookieB);
+    $resLoginB = post('/login.php', ['username' => 'userb', 'password' => 'password123', 'csrf_token' => $loginCsrfB], $regCookieB);
     $cookieB = extract_cookie($resLoginB['headers']) ?: $regCookieB;
+    assert_true(strpos(implode("\n", $resLoginB['headers']), 'Location: /profile.php') !== false, "User B logged in successfully");
 
     // Test Authorization: User A creates a note
     $notesPageA = get('/notes.php', $cookieA);
     $csrfNotesA = extract_csrf($notesPageA['body']);
-    post('/notes.php', ['action' => 'create', 'title' => 'User A Note', 'content' => 'Secret', 'csrf_token' => $csrfNotesA], $cookieA);
+    $createNoteA = post('/notes.php', ['action' => 'create', 'title' => 'User A Note', 'content' => 'Secret', 'csrf_token' => $csrfNotesA], $cookieA);
+    assert_true(strpos(implode("\n", $createNoteA['headers']), 'Location: /notes.php') !== false, "User A created note");
     
     // Find User A's note ID
     $notesPageA2 = get('/notes.php', $cookieA);
@@ -123,6 +132,8 @@ try {
     $notesPageB = get('/notes.php', $cookieB);
     $csrfNotesB = extract_csrf($notesPageB['body']);
     $deleteResB = post('/notes.php', ['action' => 'delete', 'note_id' => $noteId, 'csrf_token' => $csrfNotesB], $cookieB);
+    // When note deletion fails because of permissions, it flashes a message and redirects to /notes.php, or displays it?
+    // Wait, let's see. If error, it renders the form again with $errors array.
     assert_true(strpos((string)$deleteResB['body'], 'Note not found or not permitted') !== false, "Authorization prevents User B from deleting User A's note");
 
     // Test SQL Injection Resistance: Auth Bypass
