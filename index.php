@@ -17,7 +17,7 @@ $user = current_user();
 </section>
 <section class="training-index">
     <div class="section-heading">
-        <h2>HTTP LAB</h2>
+        <h2>Challenges</h2>
     </div>
     <div class="challenge-list">
         <?php $num = 1; foreach (challenge_definitions() as $slug => $definition): ?>
@@ -33,12 +33,11 @@ $user = current_user();
             </a>
         <?php endforeach; ?>
     </div>
-    <p class="hint"><?= $user === null ? 'Log in to save progress.' : 'Progress saved to account.' ?></p>
 </section>
 
 <section class="api-demo">
     <div class="section-heading">
-        <h2>REQUEST INSPECTOR</h2>
+        <h2>Request</h2>
     </div>
     <form id="api-demo-form" class="inspector-form" novalidate>
         <div class="request-line">
@@ -56,12 +55,12 @@ $user = current_user();
         <dt>Content-Type</dt><dd class="technical">—</dd>
         <dt>Cache-Control</dt><dd class="technical">—</dd>
     </dl>
-    <pre id="api-result" class="technical" tabindex="0" aria-label="JSON response">...</pre>
+    <pre id="api-result" class="technical" tabindex="0" aria-label="JSON response"></pre>
     <noscript><p class="hint">The inspector needs JavaScript. You can <a href="/api/users.php?id=1">open the endpoint directly</a>.</p></noscript>
 </section>
 
 <section class="baseline-links">
-    <h2 class="tools-heading">BASELINE</h2>
+    <h2 class="tools-heading">Utilities</h2>
     <ul class="inline-links">
         <li><a href="/search.php">User search</a></li>
         <li><a href="/notes.php">Private notes</a></li>
