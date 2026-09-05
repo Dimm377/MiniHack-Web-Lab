@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+require_once dirname(__DIR__) . '/config/database.php';
+
 /**
+ * Released challenge slugs are immutable. Renames require an explicit migration
+ * of solve records and consideration of flags derived from the old slug.
+ *
  * @return array<string, array{
  *     title: string,
  *     summary: string,
@@ -52,7 +57,7 @@ function challenge_definition(string $slug): ?array
 
 function instance_secret_path(): string
 {
-    return dirname(__DIR__) . '/database/instance_secret';
+    return data_directory() . '/instance_secret';
 }
 
 function load_instance_secret(): string

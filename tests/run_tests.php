@@ -1,164 +1,71 @@
 <?php
 
-$host = '127.0.0.1:8080';
-$url = "http://$host";
+declare(strict_types=1);
 
-echo "Setting up database...\n";
-exec(PHP_BINARY . ' ' . __DIR__ . '/../scripts/init_db.php');
-
-echo "Starting PHP built-in server...\n";
-$cmd = sprintf(PHP_BINARY . ' -S %s %s >/dev/null 2>&1 & echo $!', $host, escapeshellarg(__DIR__ . '/../router.php'));
-$pid = (int) exec($cmd);
-sleep(1);
-
-function get($path, $cookie = '') {
-    global $url;
-    $options = [
-        'http' => [
-            'header' => $cookie ? "Cookie: $cookie\r\n" : "",
-            'ignore_errors' => true,
-            'follow_location' => 0
-        ]
-    ];
-    $context = stream_context_create($options);
-    $res = file_get_contents($url . $path, false, $context);
-    return ['body' => $res, 'headers' => $http_response_header ?? []];
+if (PHP_SAPI !== 'cli') {
+    http_response_code(404);
+    exit;
 }
 
-function post($path, $data, $cookie = '') {
-    global $url;
-    $postdata = http_build_query($data);
-    $options = [
-        'http' => [
-            'method' => 'POST',
-            'header' => "Content-type: application/x-www-form-urlencoded\r\n" . ($cookie ? "Cookie: $cookie\r\n" : ""),
-            'content' => $postdata,
-            'ignore_errors' => true,
-            'follow_location' => 0
-        ]
-    ];
-    $context = stream_context_create($options);
-    $res = file_get_contents($url . $path, false, $context);
-    return ['body' => $res, 'headers' => $http_response_header ?? []];
-}
+require __DIR__ . '/bootstrap.php';
 
-function extract_csrf($html) {
-    if (preg_match('/name="csrf_token"\s+value="([^"]+)"/', $html, $matches)) {
-        return $matches[1];
-    }
-    return '';
+$root = dirname(__DIR__);
+$normalSnapshot = data_snapshot($root . '/database');
+$testDirectory = sys_get_temp_dir() . '/minihack-test-' . bin2hex(random_bytes(16));
+if (!mkdir($testDirectory, 0700)) {
+    throw new RuntimeException('Could not create isolated test directory.');
 }
-
-function extract_cookie($headers) {
-    $last = '';
-    foreach ($headers as $h) {
-        if (preg_match('/^Set-Cookie:\s*(PHPSESSID=[^;]+)/i', $h, $matches)) {
-            $last = $matches[1];
-        }
-    }
-    return $last;
-}
-
+$server = null;
+$pdo = null;
+$passed = 0;
 $failed = 0;
-function assert_true($condition, $message) {
-    global $failed;
-    if (!$condition) {
-        echo "FAIL: $message\n";
-        $failed++;
-    } else {
-        echo "PASS: $message\n";
+$previousDirectory = getenv('MINIHACK_DATA_DIR');
+$previousWorkers = getenv('PHP_CLI_SERVER_WORKERS');
+putenv('MINIHACK_DATA_DIR=' . $testDirectory);
+// Always own exactly one server process, even if the caller configured workers.
+putenv('PHP_CLI_SERVER_WORKERS');
+register_shutdown_function(static function () use (&$server, &$pdo, $testDirectory, $previousDirectory, $previousWorkers): void {
+    stop_server($server);
+    $server = null;
+    $pdo = null;
+    if (is_dir($testDirectory) && !is_link($testDirectory)) {
+        remove_test_tree($testDirectory);
     }
-}
+    putenv($previousDirectory === false ? 'MINIHACK_DATA_DIR' : 'MINIHACK_DATA_DIR=' . $previousDirectory);
+    putenv($previousWorkers === false ? 'PHP_CLI_SERVER_WORKERS' : 'PHP_CLI_SERVER_WORKERS=' . $previousWorkers);
+});
 
 try {
-    $res = get('/login.php');
-    $cookie = extract_cookie($res['headers']);
-    $csrf = extract_csrf($res['body']);
-    assert_true(strlen($csrf) > 0, "CSRF token generated on login page");
-
-    $res2 = post('/login.php', ['username' => '<script>alert(1)</script>', 'password' => 'wrong', 'csrf_token' => $csrf], $cookie);
-    assert_true(strpos((string)$res2['body'], '<script>') === false, "Output encoding prevents XSS in username reflection");
-    assert_true(strpos((string)$res2['body'], '&lt;script&gt;') !== false || strpos((string)$res2['body'], 'Invalid username') !== false, "Username properly escaped or rejected");
-
-    // Register User A
-    $regRes = get('/register.php');
-    $regCookieA = extract_cookie($regRes['headers']);
-    $regCsrfA = extract_csrf($regRes['body']);
-    $regPostA = post('/register.php', [
-        'username' => 'usera',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
-        'csrf_token' => $regCsrfA
-    ], $regCookieA);
-    assert_true(strpos(implode("\n", $regPostA['headers']), 'Location: /login.php') !== false, "Registration User A redirects to login");
-
-    // Login User A
-    $loginPageA = get('/login.php', $regCookieA);
-    $loginCsrfA = extract_csrf($loginPageA['body']);
-    $resLoginA = post('/login.php', ['username' => 'usera', 'password' => 'password123', 'csrf_token' => $loginCsrfA], $regCookieA);
-    $cookieA = extract_cookie($resLoginA['headers']) ?: $regCookieA;
-    assert_true(strpos(implode("\n", $resLoginA['headers']), 'Location: /profile.php') !== false, "User A logged in successfully");
-
-    // Register User B
-    $regResB = get('/register.php');
-    $regCookieB = extract_cookie($regResB['headers']);
-    $regCsrfB = extract_csrf($regResB['body']);
-    post('/register.php', [
-        'username' => 'userb',
-        'password' => 'password123',
-        'password_confirmation' => 'password123',
-        'csrf_token' => $regCsrfB
-    ], $regCookieB);
-
-    // Login User B
-    $loginPageB = get('/login.php', $regCookieB);
-    $loginCsrfB = extract_csrf($loginPageB['body']);
-    $resLoginB = post('/login.php', ['username' => 'userb', 'password' => 'password123', 'csrf_token' => $loginCsrfB], $regCookieB);
-    $cookieB = extract_cookie($resLoginB['headers']) ?: $regCookieB;
-    assert_true(strpos(implode("\n", $resLoginB['headers']), 'Location: /profile.php') !== false, "User B logged in successfully");
-
-    // Test Authorization: User A creates a note
-    $notesPageA = get('/notes.php', $cookieA);
-    $csrfNotesA = extract_csrf($notesPageA['body']);
-    $createNoteA = post('/notes.php', ['action' => 'create', 'title' => 'User A Note', 'content' => 'Secret', 'csrf_token' => $csrfNotesA], $cookieA);
-    assert_true(strpos(implode("\n", $createNoteA['headers']), 'Location: /notes.php') !== false, "User A created note");
-    
-    // Find User A's note ID
-    $notesPageA2 = get('/notes.php', $cookieA);
-    preg_match('/name="note_id"\s+value="(\d+)"/', $notesPageA2['body'], $matches);
-    $noteId = $matches[1] ?? '1';
-
-    // User B tries to delete User A's note
-    $notesPageB = get('/notes.php', $cookieB);
-    $csrfNotesB = extract_csrf($notesPageB['body']);
-    $deleteResB = post('/notes.php', ['action' => 'delete', 'note_id' => $noteId, 'csrf_token' => $csrfNotesB], $cookieB);
-    // When note deletion fails because of permissions, it flashes a message and redirects to /notes.php, or displays it?
-    // Wait, let's see. If error, it renders the form again with $errors array.
-    assert_true(strpos((string)$deleteResB['body'], 'Note not found or not permitted') !== false, "Authorization prevents User B from deleting User A's note");
-
-    // Test SQL Injection Resistance: Auth Bypass
-    $loginPage = get('/login.php');
-    $loginCookie = extract_cookie($loginPage['headers']);
-    $loginCsrf = extract_csrf($loginPage['body']);
-    $sqliRes = post('/login.php', ['username' => "' OR '1'='1", 'password' => 'wrong', 'csrf_token' => $loginCsrf], $loginCookie);
-    assert_true(strpos((string)$sqliRes['body'], 'Invalid username or password') !== false, "SQL parameterization prevents authentication bypass");
-
-    // Test SQL Injection Resistance: Search Metacharacters
-    $searchRes = get('/search.php?q=%25', $cookieA);
-    assert_true(strpos((string)$searchRes['body'], 'No matching users found') !== false, "SQL LIKE parameterization escapes metacharacters (%) properly");
-
-} finally {
-    echo "Stopping server...\n";
-    if ($pid > 0) exec("kill $pid");
-    if (file_exists(__DIR__ . '/../database/minihack.sqlite')) {
-        unlink(__DIR__ . '/../database/minihack.sqlite');
+    require $root . '/config/database.php';
+    require $root . '/includes/challenges.php';
+    // Fail BEFORE initialization if either path ever regresses to developer data.
+    if (database_path() !== $testDirectory . '/minihack.sqlite' || instance_secret_path() !== $testDirectory . '/instance_secret') {
+        throw new RuntimeException('Unsafe runtime paths: refusing to initialize or run tests.');
     }
+    if (!extension_loaded('pdo_sqlite')) {
+        throw new RuntimeException('Enable PDO SQLite in the PHP configuration before running tests.');
+    }
+    mkdir($testDirectory . '/sessions', 0700);
+    run_php([$root . '/scripts/init_db.php']);
+    $secretBefore = hash_file('sha256', $testDirectory . '/instance_secret');
+    run_php([$root . '/scripts/init_db.php']);
+    check(hash_file('sha256', $testDirectory . '/instance_secret') === $secretBefore, 'Initialization preserves the instance secret');
+    $pdo = open_database($testDirectory . '/minihack.sqlite');
+    check((int) $pdo->query('PRAGMA foreign_keys')->fetchColumn() === 1, 'Foreign keys are enabled');
+    check((int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() === 0, 'Test database starts empty');
+    $server = start_server($root, $testDirectory);
+    require __DIR__ . '/regression.php';
+} catch (Throwable $error) {
+    $failed++;
+    fwrite(STDERR, 'FAIL: ' . $error->getMessage() . "\n");
+} finally {
+    stop_server($server);
+    $server = null;
+    $pdo = null;
+    check(data_snapshot($root . '/database') === $normalSnapshot, 'Developer runtime files are untouched');
+    remove_test_tree($testDirectory);
+    check(!file_exists($testDirectory), 'Only the owned test directory was cleaned up');
 }
 
-if ($failed > 0) {
-    echo "$failed tests failed.\n";
-    exit(1);
-} else {
-    echo "All tests passed successfully.\n";
-    exit(0);
-}
+echo "$passed passed; $failed failed.\n";
+exit($failed === 0 ? 0 : 1);

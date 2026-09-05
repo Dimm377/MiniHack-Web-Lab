@@ -30,21 +30,25 @@ if (array_key_exists('q', $_GET)) {
 $pageTitle = 'User search';
 require __DIR__ . '/includes/header.php';
 ?>
-<section>
-    <p class="eyebrow">GET + prepared statement</p>
-    <h1>Search public users</h1>
-    <form class="compact-form" method="get" action="/search.php">
+<section class="search-utility">
+    <h1>User search</h1>
+    <p class="hint">Search public usernames. Private notes and challenge progress are not included.</p>
+    <form id="search-form" class="compact-form" method="get" action="/search.php" novalidate>
         <label for="q">Username</label>
-        <input id="q" name="q" type="search" maxlength="30" value="<?= e($query) ?>" placeholder="alice">
+        <div class="search-input"><input id="q" name="q" type="search" maxlength="30" value="<?= e($query) ?>" placeholder="Username or part of one" aria-describedby="search-help"><button id="clear-search" type="button" class="secondary" aria-label="Clear search" hidden>Clear</button></div>
         <button type="submit">Search</button>
     </form>
-    <?php if ($message !== null): ?><p class="alert" role="status"><?= e($message) ?></p><?php endif; ?>
+    <p id="search-help" class="hint">Literal match · up to 20 results · usernames and IDs only</p>
+    <div id="search-results">
+    <?php if ($message !== null): ?><p class="empty-state" role="status"><?= e($message) ?></p><?php endif; ?>
     <?php if ($results !== []): ?>
+        <div class="section-heading"><h2>Matches</h2><span class="hint"><?= count($results) ?><?= count($results) === 20 ? ' (limit reached; narrow your search)' : '' ?></span></div>
         <ul class="result-list">
             <?php foreach ($results as $result): ?>
                 <li><span><?= e($result['username']) ?></span><small>User ID <?= e($result['id']) ?></small></li>
             <?php endforeach; ?>
         </ul>
     <?php endif; ?>
+    </div>
 </section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

@@ -1,32 +1,120 @@
 'use strict';
 
 document.querySelectorAll('.toggle-password').forEach((button) => {
+    const input = document.getElementById(button.dataset.target);
+    if (!(input instanceof HTMLInputElement)) return;
+    button.hidden = false;
+    const label = input.labels[0]?.textContent.toLowerCase() || 'password';
     button.addEventListener('click', () => {
-        const input = document.getElementById(button.dataset.target);
-        if (!(input instanceof HTMLInputElement)) {
-            return;
-        }
         const showing = input.type === 'text';
         input.type = showing ? 'password' : 'text';
         button.textContent = showing ? 'Show' : 'Hide';
+        button.setAttribute('aria-label', (showing ? 'Show ' : 'Hide ') + label);
+        button.setAttribute('aria-pressed', String(!showing));
     });
 });
 
+document.querySelector('[data-error-summary]')?.focus();
+
+document.querySelectorAll('form[method="post"]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        if (form.dataset.submitting) {
+            event.preventDefault();
+            return;
+        }
+        form.dataset.submitting = 'true';
+        form.setAttribute('aria-busy', 'true');
+        form.querySelectorAll('button[type="submit"]').forEach((button) => { button.disabled = true; });
+    });
+});
+// Back/forward cache can restore a previously submitted form with disabled controls.
+window.addEventListener('pageshow', () => {
+    document.querySelectorAll('form[data-submitting]').forEach((form) => {
+        delete form.dataset.submitting;
+        form.removeAttribute('aria-busy');
+        form.querySelectorAll('button[type="submit"]').forEach((button) => { button.disabled = false; });
+    });
+});
+
+document.querySelectorAll('textarea').forEach((textarea) => {
+    const grow = () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = Math.max(180, textarea.scrollHeight) + 'px';
+    };
+    textarea.addEventListener('input', grow);
+    grow();
+});
+
+const noteForm = document.querySelector('.note-form');
+if (noteForm) {
+    const original = new URLSearchParams(new FormData(noteForm)).toString();
+    window.addEventListener('beforeunload', (event) => {
+        if (!noteForm.dataset.submitting && new URLSearchParams(new FormData(noteForm)).toString() !== original) {
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+}
+
+const searchForm = document.getElementById('search-form');
+const clearSearch = document.getElementById('clear-search');
+if (searchForm && clearSearch) {
+    const input = document.getElementById('q');
+    const update = () => { clearSearch.hidden = input.value === ''; };
+    input.addEventListener('input', update);
+    update();
+    clearSearch.addEventListener('click', () => {
+        input.value = '';
+        document.getElementById('search-results').replaceChildren();
+        history.replaceState(null, '', '/search.php');
+        update();
+        input.focus();
+    });
+}
+
 const apiForm = document.getElementById('api-demo-form');
-const apiResult = document.getElementById('api-result');
-if (apiForm instanceof HTMLFormElement && apiResult instanceof HTMLElement) {
+if (apiForm instanceof HTMLFormElement) {
+    const result = document.getElementById('api-result');
+    const status = document.getElementById('api-status');
+    const endpoint = document.getElementById('api-endpoint');
+    const metadata = document.querySelectorAll('#api-metadata dd');
+    const button = apiForm.querySelector('button[type="submit"]');
+    let pending = false;
     apiForm.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const id = new FormData(apiForm).get('id');
-        apiResult.textContent = 'Loading…';
+        if (pending) return;
+        const id = String(new FormData(apiForm).get('id'));
+        const path = '/api/users.php?id=' + encodeURIComponent(id);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        pending = true;
+        button.disabled = true;
+        apiForm.setAttribute('aria-busy', 'true');
+        status.textContent = 'Sending request…';
+        endpoint.textContent = path;
+        result.textContent = 'Waiting for response…';
+        metadata.forEach((item) => { item.textContent = '—'; });
         try {
-            const response = await fetch(`/api/users.php?id=${encodeURIComponent(String(id))}`, {
+            const response = await fetch(path, {
                 headers: { Accept: 'application/json' },
+                signal: controller.signal,
+                cache: 'no-store',
             });
             const body = await response.json();
-            apiResult.textContent = `HTTP ${response.status}\n${JSON.stringify(body, null, 2)}`;
-        } catch (_error) {
-            apiResult.textContent = 'The API request failed.';
+            status.textContent = 'HTTP ' + response.status;
+            metadata[0].textContent = response.headers.get('Content-Type') || 'Not set';
+            metadata[1].textContent = response.headers.get('Cache-Control') || 'Not set';
+            result.textContent = JSON.stringify(body, null, 2);
+        } catch (error) {
+            status.textContent = 'Request failed';
+            result.textContent = error.name === 'AbortError'
+                ? 'The request timed out. Send it again to retry.'
+                : 'Could not read the response. Check the local server and send the request again.';
+        } finally {
+            clearTimeout(timeout);
+            pending = false;
+            button.disabled = false;
+            apiForm.removeAttribute('aria-busy');
         }
     });
 }

@@ -25,27 +25,30 @@ foreach ($solvedRows as $row) {
 $pageTitle = 'Challenges';
 require __DIR__ . '/includes/header.php';
 ?>
-<section>
-    <p class="eyebrow">HTTP exploration / phase A</p>
+<section class="page-heading catalog-heading">
+    <div>
     <h1>Challenges</h1>
-    <p>Inspect real requests and responses, recover your per-user flag, and submit it for server-side verification.</p>
-    <p class="progress"><span class="technical"><?= count($solves) ?> / <?= count($definitions) ?></span> solved</p>
-
+    <p>Inspect the exchange. Recover your flag. Record the solve.</p>
+    </div>
+    <div class="progress"><span class="technical"><?= count($solves) ?> / <?= count($definitions) ?></span> solved<progress value="<?= count($solves) ?>" max="<?= count($definitions) ?>" aria-label="Challenges solved"></progress></div>
+</section>
+<section aria-label="HTTP exercises">
+    <div class="section-heading"><h2>HTTP fundamentals</h2><span class="hint">Browser developer tools · GET requests</span></div>
     <div class="challenge-list">
         <?php foreach ($definitions as $slug => $challenge): ?>
             <?php $isSolved = isset($solves[$slug]); ?>
             <article class="challenge-row">
                 <div>
-                    <p class="eyebrow"><?= e($challenge['method']) ?></p>
-                    <h2><?= e($challenge['title']) ?></h2>
+                    <p class="eyebrow technical"><?= e($challenge['method']) ?></p>
+                    <h3><a href="/challenge.php?slug=<?= e(rawurlencode($slug)) ?>"><?= e($challenge['title']) ?></a></h3>
                 </div>
                 <p><?= e($challenge['summary']) ?></p>
                 <span class="challenge-status <?= $isSolved ? 'is-solved' : '' ?>">
                     <?= $isSolved ? 'solved' : 'unsolved' ?>
                 </span>
-                <a href="/challenge.php?slug=<?= e(rawurlencode($slug)) ?>">Open</a>
             </article>
         <?php endforeach; ?>
     </div>
+    <p class="hint">Each flag belongs to your account. Repeating a solve keeps the same result.</p>
 </section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

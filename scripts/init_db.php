@@ -9,6 +9,8 @@ if (PHP_SAPI !== 'cli') {
 
 require_once dirname(__DIR__) . '/config/database.php';
 require_once dirname(__DIR__) . '/includes/challenges.php';
+// Restrict new SQLite journals and secrets from the moment they are created.
+umask(0077);
 $path = database_path();
 $directory = dirname($path);
 if (!is_dir($directory) && !mkdir($directory, 0700, true) && !is_dir($directory)) {
@@ -49,12 +51,23 @@ try {
         );
         SQL);
     $pdo->commit();
-    chmod($path, 0600);
+    if (!chmod($path, 0600)) {
+        throw new RuntimeException('Could not restrict database permissions.');
+    }
 
     $secretPath = instance_secret_path();
     if (!is_file($secretPath)) {
-        $bytesWritten = file_put_contents($secretPath, bin2hex(random_bytes(32)) . "\n", LOCK_EX);
-        if ($bytesWritten === false) {
+        // Exclusive creation prevents concurrent initializers replacing a secret.
+        $handle = @fopen($secretPath, 'x');
+        if ($handle !== false) {
+            try {
+                if (fwrite($handle, bin2hex(random_bytes(32)) . "\n") !== 65) {
+                    throw new RuntimeException('Could not write the challenge instance secret.');
+                }
+            } finally {
+                fclose($handle);
+            }
+        } elseif (!is_file($secretPath)) {
             throw new RuntimeException('Could not create the challenge instance secret.');
         }
     }

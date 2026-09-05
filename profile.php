@@ -20,14 +20,14 @@ if (!is_array($profile)) {
 $pageTitle = 'Profile';
 require __DIR__ . '/includes/header.php';
 ?>
-<section>
-    <p class="eyebrow">Authenticated view</p>
+<section class="profile-view">
     <h1>Your profile</h1>
     <dl class="details">
         <dt>User ID</dt><dd class="technical"><?= e($profile['id']) ?></dd>
         <dt>Username</dt><dd><?= e($profile['username']) ?></dd>
         <dt>Registered</dt><dd class="technical"><?= e($profile['created_at']) ?> UTC</dd>
     </dl>
-    <p class="hint">This page ignores URL IDs and loads the account identified by the server-side session.</p>
+    <p class="hint">Your ID and username are public. Notes and challenge progress are private to this account.</p>
+    <p><a href="/notes.php">Open private notes</a> · <a href="/challenges.php">View challenge progress</a></p>
 </section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

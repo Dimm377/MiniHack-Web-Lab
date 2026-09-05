@@ -2,9 +2,22 @@
 
 declare(strict_types=1);
 
+function data_directory(): string
+{
+    $override = getenv('MINIHACK_DATA_DIR');
+    if ($override === false) {
+        return dirname(__DIR__) . '/database';
+    }
+    // A typo must fail closed, never silently fall back to developer data.
+    if ($override === '' || trim($override, '/') === '' || str_contains($override, "\0") || $override[0] !== '/') {
+        throw new RuntimeException('MINIHACK_DATA_DIR must be an absolute directory path.');
+    }
+    return rtrim($override, '/');
+}
+
 function database_path(): string
 {
-    return dirname(__DIR__) . '/database/minihack.sqlite';
+    return data_directory() . '/minihack.sqlite';
 }
 
 function open_database(string $path, bool $allowCreate = false): PDO

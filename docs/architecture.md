@@ -1,47 +1,68 @@
 # Architecture
 
-## Request lifecycle
+MiniHack Web Lab v0.2 keeps one small PHP application boundary:
 
-1. The browser sends an HTTP request to a PHP entry point.
-2. Shared helpers configure the session and response security headers.
-3. The entry point validates the HTTP method and user-controlled input.
-4. Protected pages derive identity from the server-side session and enforce authorization.
-5. PDO executes parameterized SQL against SQLite.
-6. The entry point renders encoded HTML or returns JSON with an explicit status code.
+~~~text
+Browser
+  → allowlist router / Apache rules
+  → public PHP entry point
+  → session, CSRF, authorization, and input boundary
+  → parameterized PDO query
+  → encoded HTML or explicit JSON response
+~~~
 
-## Directory responsibilities
+The secure application baseline and educational challenge mechanics share focused helpers but have separate responsibilities.
 
-- Root PHP files are browser-facing HTML entry points.
-- `api/` contains the JSON user endpoint.
-- `assets/` contains static CSS and JavaScript.
-- `config/` owns database connection configuration.
-- `includes/` owns focused session, authentication, CSRF, challenge definitions, rendering, and shared helpers.
-- `database/` contains the ignored runtime SQLite file and an Apache access-denial rule.
-- `scripts/` contains the CLI-only, idempotent database initializer.
-- `docs/` contains project documentation.
+## Request and file boundaries
 
-## Authentication and session flow
+Root PHP entry points render pages; <code>api/users.php</code> returns JSON. <code>includes/</code> owns shared sessions, authentication, CSRF, rendering helpers, and the challenge registry. <code>config/</code> owns the SQLite path and connection. <code>scripts/init_db.php</code> is CLI-only. <code>assets/</code> contains native CSS and JavaScript. <code>docs/</code> contains maintained project documentation.
 
-Registration validates the submitted username and password, hashes the password with `password_hash()`, and inserts it through a prepared statement. Login retrieves the matching password hash and checks it with `password_verify()`. A successful login regenerates the session ID, rotates the CSRF token, and stores only the numeric user ID and username.
+The PHP development <code>router.php</code> is a public-resource allowlist. It serves only known page/API entry points and the two application assets. Everything else returns a plain 404. The Apache <code>.htaccess</code> mirrors that public set and also disables indexes, MultiViews, and path-info routing.
 
-The browser receives a PHP session cookie. It is `HttpOnly`, `SameSite=Lax`, and `Secure` when HTTPS is actually used. The local HTTP development mode cannot provide transport encryption. Logout requires a CSRF-protected POST, clears session data, expires the cookie, and destroys the server-side session.
+## Data paths and initialization
 
-## Database access
+<code>data_directory()</code> resolves to <code>database/</code> by default. An absolute, non-root <code>MINIHACK_DATA_DIR</code> overrides it for isolated processes. Both <code>database_path()</code> and <code>instance_secret_path()</code> derive from this one boundary, so a test cannot isolate one and accidentally reuse the other.
 
-`config/database.php` creates the PDO SQLite connection, enables exception mode and foreign-key enforcement, and disables emulated prepared statements. `scripts/init_db.php` owns schema creation and creates the challenge instance secret once. Application queries use prepared statements for user-controlled values.
+The initializer creates its selected directory with owner-only permissions, enables SQLite foreign keys, creates the schema idempotently, and applies <code>0600</code> to the database and secret. The secret uses exclusive file creation so concurrent initializers cannot overwrite an existing value.
 
-The SQLite file and `database/instance_secret` are deliberately absent from version control. Both use permission `0600`. Apache `.htaccess` rules and the PHP development-server `router.php` block private directories and hidden paths such as `.git`.
+The schema has three focused tables:
 
-## Authorization boundaries
+- <code>users</code>: unique username, password hash, and creation time
+- <code>notes</code>: owner ID, title, content, and creation time
+- <code>solves</code>: owner ID, challenge slug, and solve time, unique per user/slug
 
-`require_auth()` protects profile and notes. Profile lookup uses only the user ID in the authenticated session. Notes are selected with `WHERE user_id = :user_id`; deletion uses both the submitted note ID and the authenticated user ID. A hidden form field identifies a note but never establishes ownership.
+## Authentication and authorization
 
-## API request flow
+Registration validates public usernames and passwords at the server boundary, then hashes passwords. The 72-byte password cap matches the current bcrypt limit, and null bytes are rejected. Login performs an exact prepared lookup, uses a generic failure message, verifies the hash, regenerates the session ID, and rotates the CSRF token.
 
-`GET /api/users.php?id=<id>` rejects unsupported methods, validates a positive integer ID, selects only `id` and `username`, and returns JSON. It uses 200, 400, 404, 405, or 500 status codes without returning SQL errors, stack traces, password hashes, or private note data.
+The session contains only the numeric user ID and username. Profile and note queries derive identity from this server-side session. Note listing filters by owner, and deletion requires both the note ID and authenticated owner ID. Client IDs may select a resource but never establish ownership.
 
-## Challenge flow
+Logout is POST-only, verifies CSRF, clears the session, expires its cookie, and destroys server-side state.
 
-`includes/challenges.php` contains the three code-defined challenge records and the flag helper. The catalog is not stored in SQLite. `challenges.php` lists the catalog and joins it with the authenticated user's solve state. `challenge.php` handles the intended HTTP interaction and CSRF-protected flag submission.
+## Output and API
 
-The initializer stores a random 32-byte instance secret as ignored runtime data. A user's expected flag is derived with HMAC-SHA256 over the user ID and challenge slug, then formatted as `MHL{...}`. The secret and expected flags are not stored in the solve table. A valid submission inserts `(user_id, challenge_slug)` with a unique constraint, so duplicate submissions remain idempotent and another user's progress is unaffected.
+HTML entry points encode untrusted values with <code>htmlspecialchars()</code>. Stored note newlines are added only after encoding. Search escapes SQLite LIKE metacharacters and returns a maximum of 20 public results.
+
+<code>GET /api/users.php?id=&lt;positive integer&gt;</code> returns only <code>id</code> and <code>username</code>. It returns JSON for 200, 400, 404, 405, and 500 outcomes, sets <code>Cache-Control: no-store</code>, and hides PDO errors, filesystem paths, and private fields.
+
+Shared HTML responses send CSP, <code>X-Content-Type-Options: nosniff</code>, and <code>Referrer-Policy: same-origin</code>. Exceptions are logged server-side and rendered as a generic 500 page.
+
+## Challenge registry and flags
+
+<code>includes/challenges.php</code> is the code-defined challenge registry. A database catalog would add migration and query complexity without helping this small lab. Each definition contains a slug, title, summary, HTTP method, and instructions.
+
+Released slugs are immutable. Renaming one requires an explicit migration of solve records and a decision about compatibility with flags derived from the old slug.
+
+For a known slug and authenticated user, the application computes:
+
+~~~text
+MHL{ first 24 hex characters of HMAC-SHA256(user_id:slug, instance_secret) }
+~~~
+
+The query challenge releases the flag only for the exact documented query value. The header challenge adds <code>X-MiniHack-Flag</code> to the document response. The source challenge places the flag in an HTML comment. Valid submissions use constant-time comparison and an idempotent insert. All challenge responses use <code>Cache-Control: no-store</code>.
+
+## Test lifecycle
+
+<code>tests/run_tests.php</code> creates a cryptographically unique temporary directory, sets <code>MINIHACK_DATA_DIR</code>, disables inherited built-in-server workers, and uses a separate session directory. Before initialization it asserts that both runtime paths resolve inside that test directory.
+
+The runner initializes twice to test idempotency, starts one PHP process on an OS-selected loopback port, and polls until both the endpoint and its session file exist. It stops that exact process, closes SQLite, recursively removes only the fresh test directory, and verifies the normal developer-data fingerprint is unchanged. <code>tests/regression.php</code> exercises the application through real HTTP requests and uses the isolated database only for setup-independent assertions and safe failure injection.
