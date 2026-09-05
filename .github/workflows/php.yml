@@ -1,0 +1,22 @@
+name: PHP Tests
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: sqlite3
+    - name: Syntax Check
+      run: find . -name "*.php" -exec php -l {} \;
+    - name: Run Regression Tests
+      run: php tests/run_tests.php
