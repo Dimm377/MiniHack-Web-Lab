@@ -163,16 +163,33 @@ foreach ([
 }
 
 $flags = [];
-foreach (['query-parameters', 'response-headers', 'page-source'] as $slug) {
+foreach (['query-parameters', 'response-headers', 'page-source', 'cookie-state', 'request-method-body'] as $slug) {
     $path = '/challenge.php?slug=' . $slug;
     $plain = get($path, $a['cookie']);
-    $responseA = get($path . ($slug === 'query-parameters' ? '&inspect=request' : ''), $a['cookie']);
-    $responseB = get($path . ($slug === 'query-parameters' ? '&inspect=request' : ''), $b['cookie']);
+    
+    if ($slug === 'request-method-body') {
+        $solvesBeforeExploration = count_rows($pdo, 'solves');
+        $responseA = post($path, ['inspect' => 'body'], $a['cookie']);
+        $responseB = post($path, ['inspect' => 'body'], $b['cookie']);
+        check(count_rows($pdo, 'solves') === $solvesBeforeExploration, 'Exploration POST does not mutate solve state');
+    } else {
+        $responseA = get($path . ($slug === 'query-parameters' ? '&inspect=request' : ''), $a['cookie']);
+        $responseB = get($path . ($slug === 'query-parameters' ? '&inspect=request' : ''), $b['cookie']);
+    }
+    
     check($plain['status'] === 200 && str_contains($plain['headers']['cache-control'] ?? '', 'no-store'), "$slug has Cache-Control no-store");
     if ($slug === 'response-headers') {
         $flagA = $responseA['headers']['x-minihack-flag'] ?? '';
         $flagB = $responseB['headers']['x-minihack-flag'] ?? '';
         check(!str_contains($responseA['body'], $flagA) && $flagA !== '', 'Header challenge flag is outside the HTML body');
+    } elseif ($slug === 'cookie-state') {
+        $cookieHeaderA = urldecode($responseA['headers']['set-cookie'] ?? '');
+        $cookieHeaderB = urldecode($responseB['headers']['set-cookie'] ?? '');
+        preg_match('/minihack_training=(MHL\{[a-f0-9]{24}\})/', $cookieHeaderA, $matchA);
+        preg_match('/minihack_training=(MHL\{[a-f0-9]{24}\})/', $cookieHeaderB, $matchB);
+        $flagA = $matchA[1] ?? '';
+        $flagB = $matchB[1] ?? '';
+        check($flagA !== '', 'Cookie state flag is in set-cookie header');
     } else {
         $pattern = $slug === 'page-source' ? '/<!-- MiniHack challenge flag: (MHL\{[a-f0-9]{24}\}) -->/' : '/(MHL\{[a-f0-9]{24}\})/';
         preg_match($pattern, $responseA['body'], $matchA);
@@ -184,6 +201,8 @@ foreach (['query-parameters', 'response-headers', 'page-source'] as $slug) {
             foreach (['Request', 'wrong', 'request%00', ''] as $inspect) {
                 check(!preg_match('/MHL\{[a-f0-9]{24}\}/', get($path . '&inspect=' . $inspect, $a['cookie'])['body']), 'Query challenge requires the exact parameter');
             }
+        } elseif ($slug === 'request-method-body') {
+            check(!preg_match('/MHL\{[a-f0-9]{24}\}/', $plain['body']), 'POST body flag is absent until unlocked');
         } else {
             check(!str_contains(strip_tags($responseA['body']), $flagA) && $flagA !== '', 'Page-source flag is inside an HTML comment');
         }
@@ -210,9 +229,9 @@ foreach (['query-parameters', 'response-headers', 'page-source'] as $slug) {
     check($duplicate['status'] === 303 && count_rows($pdo, 'solves') === $before + 1, 'Duplicate solve is idempotent');
     check(str_contains(get($path, $a['cookie'])['body'], 'solved'), 'Solve is visible on a subsequent request');
 }
-check(count(array_unique($flags)) === 3, 'Each challenge uses a distinct flag');
+check(count(array_unique($flags)) === 5, 'Each challenge uses a distinct flag');
 check((int) $pdo->query('SELECT COUNT(*) FROM solves WHERE user_id = ' . $idB)->fetchColumn() === 0, 'Another user has no recorded progress');
-check(str_contains(get('/challenges.php', $a['cookie'])['body'], '3 / 3') && str_contains(get('/challenges.php', $b['cookie'])['body'], '0 / 3'), 'Catalog progress is isolated');
+check(str_contains(get('/challenges.php', $a['cookie'])['body'], '5 / 5') && str_contains(get('/challenges.php', $b['cookie'])['body'], '0 / 5'), 'Catalog progress is isolated');
 check(get('/challenge.php?slug=unknown', $a['cookie'])['status'] === 404, 'Unknown challenge returns 404');
 check(get('/challenge.php?slug[]=page-source', $a['cookie'])['status'] === 404, 'Array challenge slug returns 404');
 

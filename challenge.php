@@ -29,7 +29,7 @@ if ($slug === 'response-headers' && !is_post()) {
 }
 
 $error = null;
-if (is_post()) {
+if (is_post() && isset($_POST['flag'])) {
     verify_csrf_or_abort();
     $submittedFlag = trim(request_string($_POST, 'flag'));
 
@@ -50,12 +50,25 @@ if (is_post()) {
     }
 }
 
+if ($slug === 'cookie-state') {
+    $isHttps = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== '' && $_SERVER['HTTPS'] !== 'off';
+    setcookie('minihack_training', $expectedFlag, [
+        'expires' => 0,
+        'path' => '/challenge.php',
+        'secure' => $isHttps,
+        'httponly' => false,
+        'samesite' => 'Lax'
+    ]);
+}
+
 $statement = db()->prepare(
     'SELECT solved_at FROM solves WHERE user_id = :user_id AND challenge_slug = :challenge_slug'
 );
 $statement->execute(['user_id' => $user['id'], 'challenge_slug' => $slug]);
 $solvedAt = $statement->fetchColumn();
+
 $queryUnlocked = $slug === 'query-parameters' && request_string($_GET, 'inspect') === 'request';
+$bodyUnlocked = $slug === 'request-method-body' && is_post() && request_string($_POST, 'inspect') === 'body';
 
 $pageTitle = $challenge['title'];
 require __DIR__ . '/includes/header.php';
@@ -81,18 +94,15 @@ require __DIR__ . '/includes/header.php';
         <?php endforeach; ?>
     </ol>
 
-    <?php if ($slug === 'query-parameters'): ?>
-        <p class="hint">Required parameter: <code>inspect=request</code></p>
-        <?php if ($queryUnlocked): ?>
-            <div class="challenge-output">
-                <span>Server response</span>
-                <code><?= e($expectedFlag) ?></code>
-            </div>
-        <?php endif; ?>
-    <?php elseif ($slug === 'response-headers'): ?>
-        <p class="hint">Inspect the current document response, not a CSS or JavaScript request.</p>
-    <?php elseif ($slug === 'page-source'): ?>
-        <p class="hint">The rendered page intentionally does not display the flag.</p>
+    <?php if (isset($challenge['hint'])): ?>
+        <p class="hint"><?= $challenge['hint'] ?></p>
+    <?php endif; ?>
+
+    <?php if ($queryUnlocked || $bodyUnlocked): ?>
+        <div class="challenge-output">
+            <span>Server response</span>
+            <code><?= e($expectedFlag) ?></code>
+        </div>
     <?php endif; ?>
 </section>
 
