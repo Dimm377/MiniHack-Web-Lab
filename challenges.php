@@ -35,18 +35,19 @@ require __DIR__ . '/includes/header.php';
 <section aria-label="HTTP exercises">
     <div class="section-heading"><h2>HTTP fundamentals</h2><span class="hint">Browser developer tools · GET requests</span></div>
     <div class="challenge-list">
-        <?php foreach ($definitions as $slug => $challenge): ?>
+        <?php $num = 1; foreach ($definitions as $slug => $challenge): ?>
             <?php $isSolved = isset($solves[$slug]); ?>
-            <article class="challenge-row">
-                <div>
-                    <p class="eyebrow technical"><?= e($challenge['method']) ?></p>
-                    <h3><a href="/challenge.php?slug=<?= e(rawurlencode($slug)) ?>"><?= e($challenge['title']) ?></a></h3>
+            <a class="challenge-row" href="/challenge.php?slug=<?= e(rawurlencode($slug)) ?>">
+                <div class="challenge-number"><?= sprintf('%02d', $num++) ?></div>
+                <div class="challenge-main">
+                    <h3><?= e($challenge['title']) ?></h3>
+                    <p><?= e($challenge['summary']) ?></p>
                 </div>
-                <p><?= e($challenge['summary']) ?></p>
-                <span class="challenge-status <?= $isSolved ? 'is-solved' : '' ?>">
-                    <?= $isSolved ? 'solved' : 'unsolved' ?>
-                </span>
-            </article>
+                <div class="challenge-meta">
+                    <span class="method"><?= e($challenge['method']) ?></span>
+                    <span class="challenge-status <?= $isSolved ? 'is-solved' : '' ?>"><?= $isSolved ? 'solved' : '' ?></span>
+                </div>
+            </a>
         <?php endforeach; ?>
     </div>
     <p class="hint">Each flag belongs to your account. Repeating a solve keeps the same result.</p>

@@ -15,37 +15,57 @@ $user = current_user();
     <h1>Workbench</h1>
     <p>Inspect requests, headers, and response bodies.</p>
 </section>
-<div class="workbench-layout">
 <section class="training-index">
-    <h2>HTTP exercises</h2>
-    <p>Recover a flag from a request parameter, response header or page source.</p>
-    <div class="exercise-index">
-        <?php foreach (challenge_definitions() as $slug => $definition): ?>
-            <a href="/challenge.php?slug=<?= e($slug) ?>"><span><?= e($definition['title']) ?></span><code><?= e($definition['method']) ?></code></a>
+    <div class="section-heading">
+        <h2>HTTP LAB</h2>
+    </div>
+    <div class="challenge-list">
+        <?php $num = 1; foreach (challenge_definitions() as $slug => $definition): ?>
+            <a class="challenge-row" href="/challenge.php?slug=<?= e($slug) ?>">
+                <div class="challenge-number"><?= sprintf('%02d', $num++) ?></div>
+                <div class="challenge-main">
+                    <h3><?= e($definition['title']) ?></h3>
+                    <p><?= e($definition['summary']) ?></p>
+                </div>
+                <div class="challenge-meta">
+                    <span class="method"><?= e($definition['method']) ?></span>
+                </div>
+            </a>
         <?php endforeach; ?>
     </div>
     <p class="hint"><?= $user === null ? 'Log in to save progress.' : 'Progress saved to account.' ?></p>
-    <h2 class="tools-heading">Baseline</h2>
-    <dl class="tool-index">
-        <dt><a href="/search.php">User search</a></dt><dd>Public usernames and IDs.</dd>
-        <dt><a href="/notes.php">Private notes</a></dt><dd>Your findings.</dd>
-        <dt><a href="<?= $user === null ? '/login.php' : '/profile.php' ?>"><?= $user === null ? 'Log in' : 'Your profile' ?></a></dt><dd>Session management.</dd>
-    </dl>
 </section>
+
 <section class="api-demo">
-    <div class="section-heading"><h2>Request inspector</h2><span class="hint">/api/users.php</span></div>
-    <p>Look up a user ID.</p>
-    <p class="request-line"><span class="method">GET</span> <code id="api-endpoint">/api/users.php?id=&lt;id&gt;</code></p>
-    <form id="api-demo-form" class="compact-form" novalidate>
-        <label for="api-user-id">User ID</label>
-        <input id="api-user-id" name="id" type="number" min="1" placeholder="1" aria-describedby="api-help" required>
-        <button type="submit">Send request</button>
+    <div class="section-heading">
+        <h2>REQUEST INSPECTOR</h2>
+    </div>
+    <form id="api-demo-form" class="inspector-form" novalidate>
+        <div class="request-line">
+            <span class="method">GET</span> 
+            <code>/api/users.php?id=<input id="api-user-id" class="inline-input technical" name="id" type="number" min="1" placeholder="1" required></code>
+            <button type="submit">Send</button>
+        </div>
     </form>
-    <p id="api-help" class="hint">Try a registered user ID, or an unknown ID to inspect a 404.</p>
-    <div class="response-heading"><h3>Response</h3><span id="api-status" role="status">Idle</span></div>
-    <dl id="api-metadata" class="response-metadata"><dt>Content-Type</dt><dd>—</dd><dt>Cache-Control</dt><dd>—</dd></dl>
-    <pre id="api-result" tabindex="0" aria-label="JSON response">Send a request to inspect the JSON body.</pre>
+    
+    <div class="response-heading">
+        <h3>Response</h3>
+    </div>
+    <dl id="api-metadata" class="response-metadata">
+        <dt>Status</dt><dd id="api-status" class="technical">—</dd>
+        <dt>Content-Type</dt><dd class="technical">—</dd>
+        <dt>Cache-Control</dt><dd class="technical">—</dd>
+    </dl>
+    <pre id="api-result" class="technical" tabindex="0" aria-label="JSON response">...</pre>
     <noscript><p class="hint">The inspector needs JavaScript. You can <a href="/api/users.php?id=1">open the endpoint directly</a>.</p></noscript>
 </section>
-</div>
+
+<section class="baseline-links">
+    <h2 class="tools-heading">BASELINE</h2>
+    <ul class="inline-links">
+        <li><a href="/search.php">User search</a></li>
+        <li><a href="/notes.php">Private notes</a></li>
+        <li><a href="<?= $user === null ? '/login.php' : '/profile.php' ?>"><?= $user === null ? 'Log in' : 'Your profile' ?></a></li>
+    </ul>
+</section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

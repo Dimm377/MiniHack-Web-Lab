@@ -25,7 +25,7 @@ function challenge_definitions(): array
 {
     return [
         'query-parameters' => [
-            'title' => '01 — What\'s in the URL?',
+            'title' => 'What\'s in the URL?',
             'summary' => 'Something changes when the URL does.',
             'method' => 'GET',
             'instructions' => [
@@ -40,7 +40,7 @@ function challenge_definitions(): array
             ],
         ],
         'response-headers' => [
-            'title' => '02 — Check the Fine Print',
+            'title' => 'Check the Fine Print',
             'summary' => 'The page isn\'t telling you everything.',
             'method' => 'GET',
             'instructions' => [
@@ -55,7 +55,7 @@ function challenge_definitions(): array
             ],
         ],
         'page-source' => [
-            'title' => '03 — Behind the Curtain',
+            'title' => 'Behind the Curtain',
             'summary' => 'What you see isn\'t always what you get.',
             'method' => 'GET',
             'instructions' => [
@@ -70,7 +70,7 @@ function challenge_definitions(): array
             ],
         ],
         'cookie-state' => [
-            'title' => '04 — Crumbs Left Behind',
+            'title' => 'Crumbs Left Behind',
             'summary' => 'Your browser remembers more than you think.',
             'method' => 'GET',
             'instructions' => [
@@ -85,7 +85,7 @@ function challenge_definitions(): array
             ],
         ],
         'request-method-body' => [
-            'title' => '05 — Say It Properly',
+            'title' => 'Say It Properly',
             'summary' => 'Sometimes it\'s not what you ask, but how you ask.',
             'method' => 'POST',
             'instructions' => [
