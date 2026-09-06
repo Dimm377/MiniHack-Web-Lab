@@ -142,26 +142,24 @@ require __DIR__ . '/includes/header.php';
         <input id="flag" class="technical" name="flag" type="text" maxlength="80" autocomplete="off" spellcheck="false" placeholder="MHL{...}"<?= $error !== null ? ' aria-invalid="true" aria-describedby="flag-error"' : '' ?> required>
         <button type="submit">Submit flag</button>
     </form>
-    <?php if ($solvedAt !== false): ?>
-    <div class="solved-answer">
-        <span class="hint">Answer</span>
-        <code class="technical"><?= e($expectedFlag) ?></code>
-        <hr class="learning-divider">
-        <h3 class="learning-heading">What you learned</h3>
-        <div class="learning-content">
-            <h4>Why It Worked</h4>
-            <p><?= e($challenge['learning']['why_it_worked']) ?></p>
-            <h4>Real-World Relevance</h4>
-            <p><?= e($challenge['learning']['real_world_relevance']) ?></p>
-            <h4>What To Remember</h4>
-            <ul>
-                <?php foreach ($challenge['learning']['takeaways'] as $takeaway): ?>
-                    <li><?= e($takeaway) ?></li>
-                <?php endforeach; ?>
-            </ul>
-        </div>
-    </div>
-    <?php endif; ?>
 </section>
 </div>
+<?php if ($solvedAt !== false): ?>
+<div class="solved-answer">
+    <h2>Solved</h2>
+    <code class="technical"><?= e($expectedFlag) ?></code>
+</div>
+<section class="learning-content">
+    <h2>Why It Worked</h2>
+    <p><?= e($challenge['learning']['why_it_worked']) ?></p>
+    <h2>Real-World Relevance</h2>
+    <p><?= e($challenge['learning']['real_world_relevance']) ?></p>
+    <h2>What To Remember</h2>
+    <ul>
+        <?php foreach ($challenge['learning']['takeaways'] as $takeaway): ?>
+            <li><?= e($takeaway) ?></li>
+        <?php endforeach; ?>
+    </ul>
+</section>
+<?php endif; ?>
 <?php require __DIR__ . '/includes/footer.php'; ?>

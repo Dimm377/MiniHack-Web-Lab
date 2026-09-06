@@ -107,13 +107,11 @@ pre { padding: .85rem 1rem; overflow-x: auto; border: 1px solid var(--border); b
 .form-panel { max-width: 420px; padding-top: .5rem; }
 .form-panel > p { color: var(--muted); font-size: .9rem; }
 .form-switch { border-top: 1px solid var(--border); padding-top: 1.2rem; margin-top: 1.5rem; }
-.solved-answer { margin-top: 2rem; padding: 1.1rem 1.25rem; background: rgba(160, 193, 165, 0.08); border-radius: var(--radius); }
-.solved-answer > span { display: block; margin-bottom: .4rem; }
+.solved-answer { margin-top: 2rem; }
 .solved-answer code { color: var(--success); font-size: .95rem; }
-.learning-divider { border: 0; border-top: 1px solid var(--border); margin: 1.25rem 0; }
-.learning-heading { font-size: .95rem; margin-bottom: .75rem; }
-.learning-content h4 { font-size: .85rem; margin: 1rem 0 .25rem; color: var(--muted); font-weight: 600; }
-.learning-content p { font-size: .85rem; margin: 0; line-height: 1.6; }
+.learning-content { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.learning-content h2:not(:first-child) { margin-top: 1.5rem; }
+.learning-content ul { max-width: 70ch; padding-left: 1.25rem; }
 form { display: grid; gap: .5rem; }
 label { margin-top: .5rem; font-size: .85rem; font-weight: 600; }
 input, textarea, button { border: 1px solid var(--border); border-radius: var(--radius); padding: .5rem .6rem; background: var(--input); color: var(--text); font: inherit; min-width: 0; }
