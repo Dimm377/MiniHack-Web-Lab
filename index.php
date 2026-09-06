@@ -11,9 +11,9 @@ $pageTitle = 'Workbench';
 require __DIR__ . '/includes/header.php';
 $user = current_user();
 ?>
-<section class="page-heading">
-    <h1>Workbench</h1>
-</section>
+<div class="page-heading">
+    <h1 class="eyebrow">Workbench</h1>
+</div>
 <div class="workbench-layout">
 <section class="training-index">
     <div class="section-heading">
@@ -32,6 +32,14 @@ $user = current_user();
                 </div>
             </a>
         <?php endforeach; ?>
+    </div>
+    <div class="baseline-links">
+        <h2 class="tools-heading">Utilities</h2>
+        <ul class="inline-links">
+            <li><a href="/search.php">User search</a></li>
+            <li><a href="/notes.php">Private notes</a></li>
+            <li><a href="<?= $user === null ? '/login.php' : '/profile.php' ?>"><?= $user === null ? 'Log in' : 'Your profile' ?></a></li>
+        </ul>
     </div>
 </section>
 
@@ -59,13 +67,4 @@ $user = current_user();
     <noscript><p class="hint">The inspector needs JavaScript. You can <a href="/api/users.php?id=1">open the endpoint directly</a>.</p></noscript>
 </section>
 </div>
-
-<section class="baseline-links">
-    <h2 class="tools-heading">Utilities</h2>
-    <ul class="inline-links">
-        <li><a href="/search.php">User search</a></li>
-        <li><a href="/notes.php">Private notes</a></li>
-        <li><a href="<?= $user === null ? '/login.php' : '/profile.php' ?>"><?= $user === null ? 'Log in' : 'Your profile' ?></a></li>
-    </ul>
-</section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

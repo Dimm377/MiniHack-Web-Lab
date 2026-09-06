@@ -26,7 +26,7 @@ function challenge_definitions(): array
     return [
         'query-parameters' => [
             'title' => 'What\'s in the URL?',
-            'summary' => 'Something changes when the URL does.',
+            'summary' => 'Observe how query string data alters server behavior.',
             'method' => 'GET',
             'instructions' => [
                 'Open this challenge with the query parameter inspect=request.',
@@ -41,7 +41,7 @@ function challenge_definitions(): array
         ],
         'response-headers' => [
             'title' => 'Check the Fine Print',
-            'summary' => 'The page isn\'t telling you everything.',
+            'summary' => 'Find data passed outside the HTML body.',
             'method' => 'GET',
             'instructions' => [
                 'Inspect the HTTP response headers for this page.',
@@ -56,7 +56,7 @@ function challenge_definitions(): array
         ],
         'page-source' => [
             'title' => 'Behind the Curtain',
-            'summary' => 'What you see isn\'t always what you get.',
+            'summary' => 'Inspect the raw unrendered source.',
             'method' => 'GET',
             'instructions' => [
                 'Use the browser View Source feature for this page.',
@@ -71,7 +71,7 @@ function challenge_definitions(): array
         ],
         'cookie-state' => [
             'title' => 'Crumbs Left Behind',
-            'summary' => 'Your browser remembers more than you think.',
+            'summary' => 'Read state variables managed by the browser.',
             'method' => 'GET',
             'instructions' => [
                 'Inspect the cookies stored by your browser for this application.',
@@ -86,7 +86,7 @@ function challenge_definitions(): array
         ],
         'request-method-body' => [
             'title' => 'Say It Properly',
-            'summary' => 'Sometimes it\'s not what you ask, but how you ask.',
+            'summary' => 'Submit data using an alternative HTTP method.',
             'method' => 'POST',
             'instructions' => [
                 'Send a POST request to this challenge URL.',
