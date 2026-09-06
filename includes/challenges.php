@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/config/database.php';
  * of solve records and consideration of flags derived from the old slug.
  *
  * @return array<string, array{
+ *     phrase: string,
  *     title: string,
  *     summary: string,
  *     method: string,
@@ -25,6 +26,7 @@ function challenge_definitions(): array
 {
     return [
         'query-parameters' => [
+            'phrase' => 'qu3ry_p4r4m3t3rs_m4tt3r',
             'title' => 'What\'s in the URL?',
             'summary' => 'Observe how query string data alters server behavior.',
             'method' => 'GET',
@@ -40,6 +42,7 @@ function challenge_definitions(): array
             ],
         ],
         'response-headers' => [
+            'phrase' => 'r34d_th3_h34d3rs',
             'title' => 'Check the Fine Print',
             'summary' => 'Find data passed outside the HTML body.',
             'method' => 'GET',
@@ -55,6 +58,7 @@ function challenge_definitions(): array
             ],
         ],
         'page-source' => [
+            'phrase' => 'v13w_s0urc3_n3v3r_l13s',
             'title' => 'Behind the Curtain',
             'summary' => 'Inspect the raw unrendered source.',
             'method' => 'GET',
@@ -70,6 +74,7 @@ function challenge_definitions(): array
             ],
         ],
         'cookie-state' => [
+            'phrase' => 'c00k13s_r3m3mb3r',
             'title' => 'Crumbs Left Behind',
             'summary' => 'Read state variables managed by the browser.',
             'method' => 'GET',
@@ -85,6 +90,7 @@ function challenge_definitions(): array
             ],
         ],
         'request-method-body' => [
+            'phrase' => 'us3_th3_r1ght_m3th0d',
             'title' => 'Say It Properly',
             'summary' => 'Submit data using an alternative HTTP method.',
             'method' => 'POST',
@@ -102,7 +108,7 @@ function challenge_definitions(): array
     ];
 }
 
-/** @return array{title: string, summary: string, method: string, instructions: list<string>, hint?: string, learning: array{what_happened: string, why_it_worked: string, security_takeaway: string}}|null */
+/** @return array{phrase: string, title: string, summary: string, method: string, instructions: list<string>, hint?: string, learning: array{what_happened: string, why_it_worked: string, security_takeaway: string}}|null */
 function challenge_definition(string $slug): ?array
 {
     $definitions = challenge_definitions();
@@ -136,10 +142,11 @@ function load_instance_secret(): string
 
 function challenge_flag(int $userId, string $slug): string
 {
-    if ($userId < 1 || challenge_definition($slug) === null) {
+    $definition = challenge_definition($slug);
+    if ($userId < 1 || $definition === null) {
         throw new InvalidArgumentException('Cannot generate a flag for an unknown challenge or user.');
     }
 
     $digest = hash_hmac('sha256', $userId . ':' . $slug, load_instance_secret());
-    return 'MHL{' . substr($digest, 0, 24) . '}';
+    return 'MHL{' . $definition['phrase'] . '_' . substr($digest, 0, 12) . '}';
 }

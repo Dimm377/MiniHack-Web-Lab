@@ -185,29 +185,29 @@ foreach (['query-parameters', 'response-headers', 'page-source', 'cookie-state',
     } elseif ($slug === 'cookie-state') {
         $cookieHeaderA = urldecode($responseA['headers']['set-cookie'] ?? '');
         $cookieHeaderB = urldecode($responseB['headers']['set-cookie'] ?? '');
-        preg_match('/minihack_training=(MHL\{[a-f0-9]{24}\})/', $cookieHeaderA, $matchA);
-        preg_match('/minihack_training=(MHL\{[a-f0-9]{24}\})/', $cookieHeaderB, $matchB);
+        preg_match('/minihack_training=(MHL\{[a-z0-9_]+_[a-f0-9]{12}\})/', $cookieHeaderA, $matchA);
+        preg_match('/minihack_training=(MHL\{[a-z0-9_]+_[a-f0-9]{12}\})/', $cookieHeaderB, $matchB);
         $flagA = $matchA[1] ?? '';
         $flagB = $matchB[1] ?? '';
         check($flagA !== '', 'Cookie state flag is in set-cookie header');
     } else {
-        $pattern = $slug === 'page-source' ? '/<!-- MiniHack challenge flag: (MHL\{[a-f0-9]{24}\}) -->/' : '/(MHL\{[a-f0-9]{24}\})/';
+        $pattern = $slug === 'page-source' ? '/<!-- MiniHack challenge flag: (MHL\{[a-z0-9_]+_[a-f0-9]{12}\}) -->/' : '/(MHL\{[a-z0-9_]+_[a-f0-9]{12}\})/';
         preg_match($pattern, $responseA['body'], $matchA);
         preg_match($pattern, $responseB['body'], $matchB);
         $flagA = $matchA[1] ?? '';
         $flagB = $matchB[1] ?? '';
         if ($slug === 'query-parameters') {
-            check(!preg_match('/MHL\{[a-f0-9]{24}\}/', $plain['body']), 'Query flag is absent until unlocked');
+            check(!preg_match('/MHL\{[a-z0-9_]+_[a-f0-9]{12}\}/', $plain['body']), 'Query flag is absent until unlocked');
             foreach (['Request', 'wrong', 'request%00', ''] as $inspect) {
-                check(!preg_match('/MHL\{[a-f0-9]{24}\}/', get($path . '&inspect=' . $inspect, $a['cookie'])['body']), 'Query challenge requires the exact parameter');
+                check(!preg_match('/MHL\{[a-z0-9_]+_[a-f0-9]{12}\}/', get($path . '&inspect=' . $inspect, $a['cookie'])['body']), 'Query challenge requires the exact parameter');
             }
         } elseif ($slug === 'request-method-body') {
-            check(!preg_match('/MHL\{[a-f0-9]{24}\}/', $plain['body']), 'POST body flag is absent until unlocked');
+            check(!preg_match('/MHL\{[a-z0-9_]+_[a-f0-9]{12}\}/', $plain['body']), 'POST body flag is absent until unlocked');
         } else {
             check(!str_contains(strip_tags($responseA['body']), $flagA) && $flagA !== '', 'Page-source flag is inside an HTML comment');
         }
     }
-    check((bool) preg_match('/\AMHL\{[a-f0-9]{24}\}\z/', $flagA) && $flagA !== $flagB, "$slug flags differ per user");
+    check((bool) preg_match('/\AMHL\{[a-z0-9_]+_[a-f0-9]{12}\}\z/', $flagA) && $flagA !== $flagB, "$slug flags differ per user");
     $flags[] = $flagA;
     $before = count_rows($pdo, 'solves');
     foreach ([null, 'invalid'] as $token) {

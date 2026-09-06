@@ -56,8 +56,10 @@ Released slugs are immutable. Renaming one requires an explicit migration of sol
 For a known slug and authenticated user, the application computes:
 
 ~~~text
-MHL{ first 24 hex characters of HMAC-SHA256(user_id:slug, instance_secret) }
+MHL{ <challenge_phrase> _ <first 12 hex characters of HMAC-SHA256(user_id:slug, instance_secret)> }
 ~~~
+
+Flags remain deterministically scoped to the authenticated user and challenge. The visible suffix is truncated to 48 bits, so its collision and brute-force properties are not identical to the previous 96-bit visible format.
 
 The query challenge releases the flag only for the exact documented query value. The header challenge adds <code>X-MiniHack-Flag</code> to the document response. The source challenge places the flag in an HTML comment. Valid submissions use constant-time comparison and an idempotent insert. All challenge responses use <code>Cache-Control: no-store</code>.
 

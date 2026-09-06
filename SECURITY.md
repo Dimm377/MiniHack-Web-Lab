@@ -17,7 +17,7 @@ Normal runtime data lives under <code>database/</code>. Tests set <code>MINIHACK
 
 ## Challenge controls
 
-Flags use HMAC-SHA256 over the authenticated user ID and immutable challenge slug with a random 32-byte local instance secret. The database stores solve records, not expected flags. The unique <code>(user_id, challenge_slug)</code> constraint makes repeat submissions idempotent.
+Challenge flags use readable challenge-themed phrases combined with a short deterministic HMAC-SHA256-derived suffix. Flags remain deterministically scoped to the authenticated user and challenge using a random 32-byte local instance secret. The visible suffix is truncated to 12 hexadecimal characters (48 bits), so its collision and brute-force properties are not identical to the previous 96-bit visible format. The database stores solve records, not expected flags. The unique <code>(user_id, challenge_slug)</code> constraint makes repeat submissions idempotent.
 
 Released challenge slugs are immutable. A rename changes flag derivation and orphaned solve semantics, so it requires an explicit data and compatibility migration.
 
