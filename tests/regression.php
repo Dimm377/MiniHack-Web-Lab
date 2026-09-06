@@ -163,9 +163,57 @@ foreach ([
 }
 
 $flags = [];
+$releasedPhrases = [
+    'query-parameters' => 'qu3ry_p4r4m3t3rs_m4tt3r',
+    'response-headers' => 'r34d_th3_h34d3rs',
+    'page-source' => 'v13w_s0urc3_n3v3r_l13s',
+    'cookie-state' => 'c00k13s_r3m3mb3r',
+    'request-method-body' => 'us3_th3_r1ght_m3th0d',
+];
+$definitions = challenge_definitions();
+check(array_keys($definitions) === array_keys($releasedPhrases), 'Released challenge slugs remain unchanged');
 foreach (['query-parameters', 'response-headers', 'page-source', 'cookie-state', 'request-method-body'] as $slug) {
     $path = '/challenge.php?slug=' . $slug;
     $plain = get($path, $a['cookie']);
+    $definition = $definitions[$slug];
+    $hints = $definition['hints'] ?? [];
+    $learning = $definition['learning'] ?? [];
+    $objective = $definition['objective'] ?? '';
+    check($objective !== '' && str_contains($plain['body'], htmlspecialchars($objective, ENT_QUOTES, 'UTF-8')), "$slug objective is visible before solve");
+    check(array_keys($hints) === ['direction', 'concept', 'action']
+        && count(array_filter($hints, static fn ($hint) => is_string($hint) && trim($hint) !== '')) === 3,
+        "$slug has exactly three non-empty progressive hints");
+    check(substr_count($plain['body'], '<details>') === 3
+        && preg_match('/<details>\s*<summary>Hint 1.*?<details>\s*<summary>Hint 2.*?<details>\s*<summary>Hint 3.*?<\/details>\s*<\/details>\s*<\/details>/s', $plain['body']) === 1,
+        "$slug hints are collapsed and progressively nested without JavaScript");
+    check(count($hints) === 3 && count(array_filter($hints, static fn ($hint) => str_contains($plain['body'], htmlspecialchars($hint, ENT_QUOTES, 'UTF-8')))) === 3,
+        "$slug renders its own hint content");
+    $takeaways = $learning['takeaways'] ?? [];
+    check(trim($learning['why_it_worked'] ?? '') !== '' && trim($learning['real_world_relevance'] ?? '') !== ''
+        && count($takeaways) >= 2 && count($takeaways) <= 4
+        && count(array_filter($takeaways, static fn ($item) => is_string($item) && trim($item) !== '')) === count($takeaways),
+        "$slug has complete post-solve metadata and two to four takeaways");
+    $postSolveText = [$learning['why_it_worked'] ?? '', $learning['real_world_relevance'] ?? '', ...$takeaways];
+    $headings = ['Why It Worked', 'Real-World Relevance', 'What To Remember'];
+    foreach ([...$headings, ...array_filter($postSolveText)] as $text) {
+        check(!str_contains($plain['body'], htmlspecialchars($text, ENT_QUOTES, 'UTF-8')), "$slug keeps post-solve text out of unsolved HTML");
+    }
+    $anonymous = get($path);
+    check($anonymous['status'] === 303 && ($anonymous['headers']['location'] ?? '') === '/login.php'
+        && !str_contains($anonymous['body'], 'MHL{') && !isset($anonymous['headers']['x-minihack-flag']),
+        "$slug learning and flags require authentication");
+    if (in_array($slug, ['query-parameters', 'request-method-body'], true)) {
+        $method = $slug === 'query-parameters' ? 'get' : 'post';
+        check(preg_match('/<form[^>]*method="' . $method . '"[^>]*>.*?name="inspect".*?<button[^>]*type="submit"/s', $plain['body']) === 1,
+            "$slug provides a native experiment form");
+        check(str_contains($plain['body'], 'page, request, body'), "$slug offers a bounded set of experiments without requiring hints or guessing");
+        $inspectionInput = '"><script>alert(1)</script>';
+        $inspectionResponse = $method === 'get'
+            ? get($path . '&inspect=' . rawurlencode($inspectionInput), $a['cookie'])
+            : post($path, ['inspect' => $inspectionInput], $a['cookie']);
+        check(str_contains($inspectionResponse['body'], htmlspecialchars($inspectionInput, ENT_QUOTES, 'UTF-8'))
+            && !str_contains($inspectionResponse['body'], $inspectionInput), "$slug safely encodes retained inspection input");
+    }
     
     if ($slug === 'request-method-body') {
         $solvesBeforeExploration = count_rows($pdo, 'solves');
@@ -203,11 +251,20 @@ foreach (['query-parameters', 'response-headers', 'page-source', 'cookie-state',
             }
         } elseif ($slug === 'request-method-body') {
             check(!preg_match('/MHL\{[a-z0-9_]+_[a-f0-9]{12}\}/', $plain['body']), 'POST body flag is absent until unlocked');
+            foreach ([get($path . '&inspect=body', $a['cookie']), post($path, ['inspect' => 'request'], $a['cookie']), post($path, ['inspect' => ['body']], $a['cookie'])] as $wrongExperiment) {
+                check(!str_contains($wrongExperiment['body'], $flagA), 'Body challenge still requires POST and the exact scalar body value');
+            }
         } else {
             check(!str_contains(strip_tags($responseA['body']), $flagA) && $flagA !== '', 'Page-source flag is inside an HTML comment');
         }
     }
     check((bool) preg_match('/\AMHL\{[a-z0-9_]+_[a-f0-9]{12}\}\z/', $flagA) && $flagA !== $flagB, "$slug flags differ per user");
+    $canonicalDigest = hash_hmac('sha256', $idA . ':' . $slug, hex2bin(trim(file_get_contents($testDirectory . '/instance_secret'))));
+    check($flagA === 'MHL{' . $releasedPhrases[$slug] . '_' . substr($canonicalDigest, 0, 12) . '}'
+        && challenge_flag($idA, $slug) === $flagA, "$slug preserves its phrase, canonical HMAC-SHA256 input and 12-hex suffix");
+    foreach ([...$headings, ...array_filter($postSolveText)] as $text) {
+        check(!str_contains($responseA['body'], htmlspecialchars($text, ENT_QUOTES, 'UTF-8')), "$slug discovery alone does not unlock explanation");
+    }
     $flags[] = $flagA;
     $before = count_rows($pdo, 'solves');
     foreach ([null, 'invalid'] as $token) {
@@ -219,15 +276,29 @@ foreach (['query-parameters', 'response-headers', 'page-source', 'cookie-state',
         check($rejected['status'] === 403 && count_rows($pdo, 'solves') === $before, 'Challenge CSRF rejection never records a solve');
         check(str_contains($rejected['headers']['cache-control'] ?? '', 'no-store'), 'Rejected challenge responses are not cached');
     }
-    foreach ([$flagB, 'MHL{invalid}', '', str_repeat('x', 81)] as $invalid) {
+    foreach ([$flagB, 'MHL{invalid}', '', str_repeat('x', 81), strtoupper($flagA), substr($flagA, 0, -2) . '}', $flagA . 'extra'] as $invalid) {
         $rejected = post($path, ['flag' => $invalid, 'csrf_token' => $a['csrf'], 'user_id' => $idB], $a['cookie']);
         check(str_contains($rejected['body'], 'The submitted flag is not correct.') && count_rows($pdo, 'solves') === $before, 'Invalid or another user flag fails generically');
+        check(!str_contains($rejected['body'], 'Real-World Relevance'), 'Invalid flag does not unlock learning');
     }
     $valid = post($path, ['flag' => $flagA, 'csrf_token' => $a['csrf'], 'user_id' => $idB], $a['cookie']);
     check($valid['status'] === 303 && count_rows($pdo, 'solves') === $before + 1, 'Valid flag records a solve');
     $duplicate = post($path, ['flag' => $flagA, 'csrf_token' => $a['csrf']], $a['cookie']);
     check($duplicate['status'] === 303 && count_rows($pdo, 'solves') === $before + 1, 'Duplicate solve is idempotent');
-    check(str_contains(get($path, $a['cookie'])['body'], 'solved'), 'Solve is visible on a subsequent request');
+    $solved = get($path, $a['cookie']);
+    $solveRow = $pdo->query('SELECT user_id, challenge_slug, solved_at FROM solves WHERE user_id = ' . $idA . ' AND challenge_slug = ' . $pdo->quote($slug))->fetch();
+    check($solveRow !== false && $solveRow['challenge_slug'] === $slug && str_contains($solved['body'], 'solved ' . $solveRow['solved_at'] . ' UTC'), 'Solve timestamp persists and is visible on a subsequent request');
+    foreach ([...$headings, ...array_filter($postSolveText)] as $text) {
+        check(str_contains($solved['body'], htmlspecialchars($text, ENT_QUOTES, 'UTF-8')), "$slug renders its post-solve explanation after submission");
+    }
+    foreach ($definitions as $otherSlug => $otherDefinition) {
+        if ($otherSlug !== $slug && isset($otherDefinition['learning']['real_world_relevance'])) {
+            check(!str_contains($solved['body'], htmlspecialchars($otherDefinition['learning']['real_world_relevance'], ENT_QUOTES, 'UTF-8')),
+                "$slug does not render $otherSlug explanation");
+        }
+    }
+    $otherUser = get($path . '&user_id=' . $idA . '&solved=1', $b['cookie']);
+    check(!str_contains($otherUser['body'], 'Real-World Relevance') && !str_contains($otherUser['body'], $flagA), "$slug cannot borrow another user's solved state or flag");
 }
 check(count(array_unique($flags)) === 5, 'Each challenge uses a distinct flag');
 check((int) $pdo->query('SELECT COUNT(*) FROM solves WHERE user_id = ' . $idB)->fetchColumn() === 0, 'Another user has no recorded progress');
@@ -236,7 +307,7 @@ check(get('/challenge.php?slug=unknown', $a['cookie'])['status'] === 404, 'Unkno
 check(get('/challenge.php?slug[]=page-source', $a['cookie'])['status'] === 404, 'Array challenge slug returns 404');
 
 foreach ([
-    '/README.md', '/SECURITY.md', '/docs/architecture.md', '/router.php',
+    '/README.md', '/SECURITY.md', '/docs/architecture.md', '/docs/principles.md', '/router.php',
     '/database', '/database/minihack.sqlite', '/database/instance_secret',
     '/config/database.php', '/includes/challenges.php', '/scripts/init_db.php',
     '/tests/run_tests.php', '/tests/bootstrap.php', '/tests/debug_test.php', '/patch.php',

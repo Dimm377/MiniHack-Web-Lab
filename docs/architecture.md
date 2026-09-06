@@ -49,7 +49,9 @@ Shared HTML responses send CSP, <code>X-Content-Type-Options: nosniff</code>, an
 
 ## Challenge registry and flags
 
-<code>includes/challenges.php</code> is the code-defined challenge registry. A database catalog would add migration and query complexity without helping this small lab. Each definition contains a slug, title, summary, HTTP method, and instructions.
+<code>includes/challenges.php</code> is the code-defined challenge registry. A database catalog would add migration and query complexity without helping this small lab. Each slug-keyed definition contains a flag phrase, title, summary, HTTP method, objective, investigation instructions, three static hints (direction, concept, action), and static learning content (why it worked, real-world relevance, and takeaways).
+
+<code>challenge.php</code> renders hints as three nested native disclosures, so each level becomes available after the preceding one is opened. The query and body challenges offer native inspection forms with a small set of candidate inputs; their existing unlock checks remain unchanged. Learning content is emitted only when the existing <code>user_id</code>/<code>challenge_slug</code> query finds a solve. There is no hint persistence, JavaScript dependency, or additional schema. See [Learning principles](principles.md) for the educational contract.
 
 Released slugs are immutable. Renaming one requires an explicit migration of solve records and a decision about compatibility with flags derived from the old slug.
 

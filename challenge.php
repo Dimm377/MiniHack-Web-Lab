@@ -89,6 +89,8 @@ require __DIR__ . '/includes/header.php';
 <p class="request-line"><span class="method"><?= e($challenge['method']) ?></span> <code>/challenge.php?slug=<?= e($slug) ?><?= $queryUnlocked ? '&amp;inspect=request' : '' ?></code></p>
 <div class="exercise-layout">
 <section class="challenge-task">
+    <h2>Objective</h2>
+    <p><?= e($challenge['objective']) ?></p>
     <h2>Investigation</h2>
     <ol>
         <?php foreach ($challenge['instructions'] as $instruction): ?>
@@ -96,8 +98,14 @@ require __DIR__ . '/includes/header.php';
         <?php endforeach; ?>
     </ol>
 
-    <?php if (isset($challenge['hint'])): ?>
-        <p class="hint"><?= $challenge['hint'] ?></p>
+    <?php if ($slug === 'query-parameters' || $slug === 'request-method-body'): ?>
+    <form method="<?= $slug === 'query-parameters' ? 'get' : 'post' ?>" action="/challenge.php?slug=<?= e(rawurlencode($slug)) ?>" novalidate>
+        <input type="hidden" name="slug" value="<?= e($slug) ?>">
+        <label for="inspect">Inspection target</label>
+        <p id="inspect-help" class="hint">Available targets: page, request, body. Compare their responses.</p>
+        <input id="inspect" name="inspect" type="text" value="<?= e(request_string($slug === 'query-parameters' ? $_GET : $_POST, 'inspect')) ?>" aria-describedby="inspect-help" autocomplete="off" spellcheck="false">
+        <button type="submit">Send inspection</button>
+    </form>
     <?php endif; ?>
 
     <?php if ($queryUnlocked || $bodyUnlocked): ?>
@@ -106,6 +114,20 @@ require __DIR__ . '/includes/header.php';
             <code><?= e($expectedFlag) ?></code>
         </div>
     <?php endif; ?>
+
+    <h3>Progressive hints</h3>
+    <details>
+        <summary>Hint 1 — Direction</summary>
+        <p><?= e($challenge['hints']['direction']) ?></p>
+        <details>
+            <summary>Hint 2 — Concept</summary>
+            <p><?= e($challenge['hints']['concept']) ?></p>
+            <details>
+                <summary>Hint 3 — Action</summary>
+                <p><?= e($challenge['hints']['action']) ?></p>
+            </details>
+        </details>
+    </details>
 </section>
 
 <section class="flag-submit">
@@ -124,18 +146,20 @@ require __DIR__ . '/includes/header.php';
     <div class="solved-answer">
         <span class="hint">Answer</span>
         <code class="technical"><?= e($expectedFlag) ?></code>
-        <?php if (isset($challenge['learning'])): ?>
         <hr class="learning-divider">
         <h3 class="learning-heading">What you learned</h3>
         <div class="learning-content">
-            <h4>What happened</h4>
-            <p><?= e($challenge['learning']['what_happened']) ?></p>
-            <h4>Why it worked</h4>
+            <h4>Why It Worked</h4>
             <p><?= e($challenge['learning']['why_it_worked']) ?></p>
-            <h4>Security takeaway</h4>
-            <p><?= e($challenge['learning']['security_takeaway']) ?></p>
+            <h4>Real-World Relevance</h4>
+            <p><?= e($challenge['learning']['real_world_relevance']) ?></p>
+            <h4>What To Remember</h4>
+            <ul>
+                <?php foreach ($challenge['learning']['takeaways'] as $takeaway): ?>
+                    <li><?= e($takeaway) ?></li>
+                <?php endforeach; ?>
+            </ul>
         </div>
-        <?php endif; ?>
     </div>
     <?php endif; ?>
 </section>

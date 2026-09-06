@@ -13,12 +13,13 @@ require_once dirname(__DIR__) . '/config/database.php';
  *     title: string,
  *     summary: string,
  *     method: string,
+ *     objective: string,
  *     instructions: list<string>,
- *     hint?: string,
+ *     hints: array{direction: string, concept: string, action: string},
  *     learning: array{
- *         what_happened: string,
  *         why_it_worked: string,
- *         security_takeaway: string
+ *         real_world_relevance: string,
+ *         takeaways: list<string>
  *     }
  * }>
  */
@@ -28,87 +29,132 @@ function challenge_definitions(): array
         'query-parameters' => [
             'phrase' => 'qu3ry_p4r4m3t3rs_m4tt3r',
             'title' => 'What\'s in the URL?',
-            'summary' => 'Observe how query string data alters server behavior.',
+            'summary' => 'Compare how the same page responds to different inputs.',
             'method' => 'GET',
+            'objective' => 'This page accepts an inspection target. Find an input that changes its response and recover the training flag.',
             'instructions' => [
-                'Open this challenge with the query parameter inspect=request.',
-                'Read the response produced for that exact parameter value.',
+                'Use the inspection form below. Before sending, predict what will change.',
+                'Compare the address and returned page between attempts. Change one thing at a time.',
             ],
-            'hint' => 'Required parameter: <code>inspect=request</code>',
+            'hints' => [
+                'direction' => 'Compare two attempts: what changed on the way to the server, and what changed on the way back?',
+                'concept' => 'A GET form puts named values in the URL query string. The server can read those values when building its response.',
+                'action' => 'Try a different inspection value while keeping the rest of the request unchanged, then compare the response.',
+            ],
             'learning' => [
-                'what_happened' => 'The `inspect=request` value is sent in the URL as a query parameter and read by the server when building the response.',
-                'why_it_worked' => 'Query parameters are client-controlled input. They allow the client to send values to the server through the request URL and can influence application behavior.',
-                'security_takeaway' => 'Never treat query parameters as trusted input. Validate them and keep sensitive authorization decisions on the server.',
+                'why_it_worked' => 'The GET form sent its inspect field in the URL query string. This challenge reads that field and returns the training flag only when its value is exactly request. Other values leave the output locked. The changed response came from a server-side condition, not from the browser changing the page on its own.',
+                'real_world_relevance' => 'Query parameters routinely control searches, filters, and pagination; they are not vulnerabilities. Comparing responses while changing one parameter helps you understand an application during debugging or security testing. A flaw appears if a server trusts a client-supplied value for a sensitive decision, such as granting access to another account. Authorization must use the authenticated identity and server-side checks.',
+                'takeaways' => [
+                    'Treat the URL as input to the application.',
+                    'Change one value at a time and compare responses.',
+                    'Client-controlled input must not establish authorization.',
+                ],
             ],
         ],
         'response-headers' => [
             'phrase' => 'r34d_th3_h34d3rs',
             'title' => 'Check the Fine Print',
-            'summary' => 'Find data passed outside the HTML body.',
+            'summary' => 'Compare a page visit with the exchange that delivered it.',
             'method' => 'GET',
+            'objective' => 'Loading this challenge returns a training flag to your browser. Recover it by investigating the exchange for this page.',
             'instructions' => [
-                'Inspect the HTTP response headers for this page.',
-                'Find the custom X-MiniHack-Flag response header.',
+                'Reload the page while observing its request in browser developer tools.',
+                'Compare what the browser received with what you can see on the page.',
             ],
-            'hint' => 'Inspect the current document response, not a CSS or JavaScript request.',
+            'hints' => [
+                'direction' => 'What else can you inspect about this page visit beyond the visible result?',
+                'concept' => 'An HTTP response includes a status, headers, and a body. The browser does not render all of them as page content.',
+                'action' => 'In the Network panel, reload and select this challenge document. Examine its response headers, including custom fields.',
+            ],
             'learning' => [
-                'what_happened' => 'The flag was returned in an HTTP response header instead of the HTML body.',
-                'why_it_worked' => 'An HTTP response contains more than the rendered page. Status information, headers, and the response body are all delivered to the client and can be inspected using browser developer tools, Burp, or tools such as `curl -i`.',
-                'security_takeaway' => 'Data does not become secret just because it is not visible on the page. Anything sent to the client in an HTTP header should be considered accessible to that client.',
+                'why_it_worked' => 'For a normal page visit, this challenge adds X-MiniHack-Flag to the HTTP response headers. That field travels alongside the HTML body, so the browser receives the flag without displaying it as page text. Inspecting the document response exposes the value; inspecting a stylesheet request would show a different response.',
+                'real_world_relevance' => 'Response headers are ordinary HTTP metadata used for content types, caching, redirects, and security policies. Inspecting them helps diagnose browser behavior and assess application configuration. A custom header is not itself a vulnerability. Sending confidential data in one can disclose it to the recipient, just as sending it in the body can; lack of visible page text provides no protection.',
+                'takeaways' => [
+                    'Inspect the complete response, including its status and headers.',
+                    'Match your evidence to the correct request.',
+                    'Data sent to a client is accessible to that client.',
+                ],
             ],
         ],
         'page-source' => [
             'phrase' => 'v13w_s0urc3_n3v3r_l13s',
             'title' => 'Behind the Curtain',
-            'summary' => 'Inspect the raw unrendered source.',
+            'summary' => 'Compare what a browser receives with what it displays.',
             'method' => 'GET',
+            'objective' => 'This page arrives with a training flag, but the visible content is only part of the evidence. Recover the flag from what your browser received.',
             'instructions' => [
-                'Use the browser View Source feature for this page.',
-                'Find the MiniHack flag stored in an HTML comment.',
+                'Load the challenge and compare the delivered document with the visible page.',
+                'Look for differences you can explain through browser behavior.',
             ],
-            'hint' => 'The rendered page intentionally does not display the flag.',
+            'hints' => [
+                'direction' => 'Does everything delivered to a browser have to become visible page text?',
+                'concept' => 'HTML is interpreted before it is displayed. Comments remain in the delivered document but are not rendered as text.',
+                'action' => 'Open View Page Source or the document response in the Network panel. Look for an HTML comment associated with this challenge.',
+            ],
             'learning' => [
-                'what_happened' => 'The flag was present in the HTML response even though it was not visibly rendered on the page.',
-                'why_it_worked' => 'The browser receives the HTML source before rendering it. Comments, hidden elements, attributes, and other source content can still be inspected by the user.',
-                'security_takeaway' => 'If sensitive data is delivered to the browser, it should be considered exposed. HTML comments, hidden elements, CSS, and client-side JavaScript are not access-control mechanisms.',
+                'why_it_worked' => 'The server placed the training flag in an HTML comment in this challenge response. The browser received those bytes but skipped the comment when drawing the page. Reading the delivered HTML revealed content that rendering had left out. This exposes the generated HTML, not the PHP source that ran on the server.',
+                'real_world_relevance' => 'Comparing response HTML with the rendered page helps debug missing content and distinguish server output from later browser changes. During an application assessment, source inspection can also reveal data unintentionally shipped to clients. HTML comments are normal markup, not vulnerabilities. Placing confidential information in comments or hidden elements can cause disclosure because visual hiding does not enforce access control.',
+                'takeaways' => [
+                    'The rendered page is one representation of the response.',
+                    'Response HTML and the live DOM can differ.',
+                    'Keep confidential data out of responses to unauthorized clients.',
+                ],
             ],
         ],
         'cookie-state' => [
             'phrase' => 'c00k13s_r3m3mb3r',
             'title' => 'Crumbs Left Behind',
-            'summary' => 'Read state variables managed by the browser.',
+            'summary' => 'Observe what a page visit leaves in the browser.',
             'method' => 'GET',
+            'objective' => 'Visiting this challenge leaves training state in your browser. Find what the visit leaves behind and recover the training flag.',
             'instructions' => [
-                'Inspect the cookies stored by your browser for this application.',
-                'Find the challenge-specific training cookie.',
+                'Observe the browser state for this site, then load the challenge again.',
+                'Compare the response with what the browser retains for later requests.',
             ],
-            'hint' => 'Your browser remembers more than the page shows.',
+            'hints' => [
+                'direction' => 'The page looks the same after a reload. What could the browser be carrying between visits?',
+                'concept' => 'A Set-Cookie response header asks the browser to store a value. Matching later requests can send it back in the Cookie header.',
+                'action' => 'Inspect this site in the browser cookie storage panel after loading the challenge. Look at the minihack_training value and compare it with the response Set-Cookie field.',
+            ],
             'learning' => [
-                'what_happened' => 'The server sent challenge state using `Set-Cookie`, and the browser stored that value for later requests.',
-                'why_it_worked' => 'Cookies allow servers to maintain state across otherwise independent HTTP requests. The browser can send stored cookies back using the `Cookie` request header.',
-                'security_takeaway' => 'Client-visible or client-controlled state must never be trusted for authorization or other sensitive decisions. Authentication and authorization must still be validated on the server.',
+                'why_it_worked' => 'This challenge sends the training flag in a cookie named minihack_training. The browser stores it and can send it back on matching requests to /challenge.php. The server sets the value again on later visits, so it need not change on reload. Reading stored state revealed what the visible page did not show. This training cookie is separate from the login session cookie.',
+                'real_world_relevance' => 'Cookies are an ordinary mechanism for preferences and sessions. Inspecting their values, paths, and attributes helps debug state and assess session handling. HttpOnly limits script access; Secure restricts transmission to HTTPS; neither replaces server authorization. A vulnerability can arise when a server accepts an editable cookie as proof of a role or ownership. The training cookie here grants no account privileges.',
+                'takeaways' => [
+                    'Compare Set-Cookie responses with later Cookie requests.',
+                    'Cookie scope and attributes affect browser behavior.',
+                    'Stored client state is not proof of permission.',
+                ],
             ],
         ],
         'request-method-body' => [
             'phrase' => 'us3_th3_r1ght_m3th0d',
             'title' => 'Say It Properly',
-            'summary' => 'Submit data using an alternative HTTP method.',
+            'summary' => 'Compare a page visit with data sent from a form.',
             'method' => 'POST',
+            'objective' => 'This challenge accepts inspection attempts as well as page visits. Find an attempt that changes the server response and recover the training flag.',
             'instructions' => [
-                'Send a POST request to this challenge URL.',
-                'Include `inspect=body` in the request body (form-urlencoded).',
+                'Try the inspection form and compare its request with a normal page visit.',
+                'Predict where the input travels, then inspect what was sent and returned.',
             ],
-            'hint' => 'Required body parameter: <code>inspect=body</code>',
+            'hints' => [
+                'direction' => 'Two requests to the same address need not ask the server to do the same thing.',
+                'concept' => 'A POST form sends named values in the request body. The server can check the method and body separately from the URL query string.',
+                'action' => 'Try sending inspect=body in the request body, then compare that POST request with the same field and value placed in the URL query string.',
+            ],
             'learning' => [
-                'what_happened' => 'The server only responded to the expected HTTP method and request body.',
-                'why_it_worked' => 'An HTTP request includes more than a URL. The method, headers, and request body can all influence server behavior.',
-                'security_takeaway' => 'Applications must validate request methods, content types, input data, authentication, and authorization independently. Changing the HTTP method must not bypass security controls.',
+                'why_it_worked' => 'The inspection form sent a POST with form-urlencoded inspect=body in the request body. This challenge checks both the POST method and that exact parsed body value before returning the training flag. Putting the same value in a GET query string does not satisfy that condition. The exploration returns a response without recording a solve; a valid flag submission records it separately.',
+                'real_world_relevance' => 'Methods and bodies are normal parts of HTTP, not vulnerabilities. A URL alone does not describe a complete request: debugging and security testing often require comparing methods, content types, and submitted fields. POST does not encrypt data or establish permission. Real applications still need HTTPS, input validation, authentication, authorization, and appropriate CSRF protection for state-changing operations.',
+                'takeaways' => [
+                    'Compare the method and body as well as the URL.',
+                    'Query fields and body fields are different inputs.',
+                    'Using POST does not make a request trusted or confidential.',
+                ],
             ],
         ],
     ];
 }
 
-/** @return array{phrase: string, title: string, summary: string, method: string, instructions: list<string>, hint?: string, learning: array{what_happened: string, why_it_worked: string, security_takeaway: string}}|null */
+/** @return array|null A definition from challenge_definitions(), or null for an unknown slug. */
 function challenge_definition(string $slug): ?array
 {
     $definitions = challenge_definitions();
