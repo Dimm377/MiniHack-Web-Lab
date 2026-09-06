@@ -79,10 +79,12 @@ require __DIR__ . '/includes/header.php';
 <section class="page-heading">
     <p><a href="/challenges.php">&larr; All challenges</a></p>
     <h1><?= e($challenge['title']) ?></h1>
-    <p><?= e($challenge['summary']) ?></p>
-    <p class="challenge-status <?= $solvedAt !== false ? 'is-solved' : '' ?>">
-        <?= $solvedAt !== false ? 'solved ' . e($solvedAt) . ' UTC' : 'unsolved' ?>
-    </p>
+    <div class="section-heading">
+        <p><?= e($challenge['summary']) ?></p>
+        <span class="challenge-status <?= $solvedAt !== false ? 'is-solved' : '' ?>">
+            <?= $solvedAt !== false ? 'solved ' . e($solvedAt) . ' UTC' : 'unsolved' ?>
+        </span>
+    </div>
 </section>
 <p class="request-line"><span class="method"><?= e($challenge['method']) ?></span> <code>/challenge.php?slug=<?= e($slug) ?><?= $queryUnlocked ? '&amp;inspect=request' : '' ?></code></p>
 <div class="exercise-layout">

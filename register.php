@@ -67,7 +67,6 @@ require __DIR__ . '/includes/header.php';
 ?>
 <section class="form-panel">
     <h1>Create an account</h1>
-    <p>Save your notes and challenge progress. Your username will be public.</p>
     <?php if ($errors !== []): ?>
         <div id="register-errors" class="alert alert-error" role="alert" tabindex="-1" data-error-summary><ul>
             <?php foreach ($errors as $error): ?><li><?= e($error) ?></li><?php endforeach; ?>

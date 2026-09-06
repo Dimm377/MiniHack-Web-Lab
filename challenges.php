@@ -27,13 +27,12 @@ require __DIR__ . '/includes/header.php';
 ?>
 <section class="page-heading catalog-heading">
     <div>
-    <h1>Challenges</h1>
-    <p>Inspect the exchange. Recover your flag. Record the solve.</p>
+        <h1>Challenges</h1>
     </div>
-    <div class="progress"><span class="technical"><?= count($solves) ?> / <?= count($definitions) ?></span> solved<progress value="<?= count($solves) ?>" max="<?= count($definitions) ?>" aria-label="Challenges solved"></progress></div>
+    <div class="progress"><span class="technical"><?= count($solves) ?> / <?= count($definitions) ?></span> solved</div>
 </section>
 <section aria-label="HTTP exercises">
-    <div class="section-heading"><h2>HTTP fundamentals</h2><span class="hint">Browser developer tools · GET requests</span></div>
+    <div class="section-heading"><h2>HTTP fundamentals</h2></div>
     <div class="challenge-list">
         <?php $num = 1; foreach ($definitions as $slug => $challenge): ?>
             <?php $isSolved = isset($solves[$slug]); ?>

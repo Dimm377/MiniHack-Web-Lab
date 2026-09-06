@@ -13,8 +13,8 @@ $user = current_user();
 ?>
 <section class="page-heading">
     <h1>Workbench</h1>
-    <p>Inspect requests, headers, and response bodies.</p>
 </section>
+<div class="workbench-layout">
 <section class="training-index">
     <div class="section-heading">
         <h2>Challenges</h2>
@@ -37,27 +37,28 @@ $user = current_user();
 
 <section class="api-demo">
     <div class="section-heading">
-        <h2>Request</h2>
+        <h2>HTTP Inspector</h2>
     </div>
-    <form id="api-demo-form" class="inspector-form" novalidate>
-        <div class="request-line">
-            <span class="method">GET</span> 
-            <code>/api/users.php?id=<input id="api-user-id" class="inline-input technical" name="id" type="number" min="1" placeholder="1" required></code>
-            <button type="submit">Send</button>
+    <div class="inspector-console">
+        <form id="api-demo-form" novalidate>
+            <div class="request-line">
+                <span class="method">GET</span> 
+                <code>/api/users.php?id=<input id="api-user-id" class="inline-input technical" name="id" type="number" min="1" placeholder="1" required></code>
+                <button type="submit">Send</button>
+            </div>
+        </form>
+        <div class="response-panel">
+            <dl id="api-metadata" class="response-metadata">
+                <dt>Status</dt><dd id="api-status" class="technical">—</dd>
+                <dt>Content-Type</dt><dd class="technical">—</dd>
+                <dt>Cache-Control</dt><dd class="technical">—</dd>
+            </dl>
+            <pre id="api-result" class="technical" tabindex="0" aria-label="JSON response"></pre>
         </div>
-    </form>
-    
-    <div class="response-heading">
-        <h3>Response</h3>
     </div>
-    <dl id="api-metadata" class="response-metadata">
-        <dt>Status</dt><dd id="api-status" class="technical">—</dd>
-        <dt>Content-Type</dt><dd class="technical">—</dd>
-        <dt>Cache-Control</dt><dd class="technical">—</dd>
-    </dl>
-    <pre id="api-result" class="technical" tabindex="0" aria-label="JSON response"></pre>
     <noscript><p class="hint">The inspector needs JavaScript. You can <a href="/api/users.php?id=1">open the endpoint directly</a>.</p></noscript>
 </section>
+</div>
 
 <section class="baseline-links">
     <h2 class="tools-heading">Utilities</h2>

@@ -38,7 +38,6 @@ require __DIR__ . '/includes/header.php';
 ?>
 <section class="form-panel">
     <h1>Log in</h1>
-    <p>Continue to your notes and challenges.</p>
     <?php if ($error !== null): ?><p id="login-error" class="alert alert-error" role="alert" tabindex="-1" data-error-summary><?= e($error) ?></p><?php endif; ?>
     <form method="post" action="/login.php" novalidate>
         <?= csrf_input() ?>

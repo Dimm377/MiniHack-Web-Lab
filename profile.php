@@ -27,7 +27,7 @@ require __DIR__ . '/includes/header.php';
         <dt>Username</dt><dd><?= e($profile['username']) ?></dd>
         <dt>Registered</dt><dd class="technical"><?= e($profile['created_at']) ?> UTC</dd>
     </dl>
-    <p class="hint">Your ID and username are public. Notes and challenge progress are private to this account.</p>
+    <p class="hint">Your ID and username are public. Notes and challenge progress are private.</p>
     <p><a href="/notes.php">Open private notes</a> · <a href="/challenges.php">View challenge progress</a></p>
 </section>
 <?php require __DIR__ . '/includes/footer.php'; ?>

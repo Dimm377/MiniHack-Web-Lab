@@ -91,7 +91,7 @@ if (apiForm instanceof HTMLFormElement) {
         button.disabled = true;
         apiForm.setAttribute('aria-busy', 'true');
         status.textContent = 'Sending request…';
-        endpoint.textContent = path;
+        if (endpoint) endpoint.textContent = path;
         result.textContent = 'Waiting for response…';
         metadata.forEach((item) => { item.textContent = '—'; });
         try {
